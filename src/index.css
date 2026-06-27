@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-cloud font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-eye-red/30 text-cloud;
+  }
+
+  /* Scrollbar dark */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-700 rounded-full;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
+  }
+}
+
+@layer components {
+  /* ---- Design System: componentes utilitários ---- */
+  .eye-card {
+    @apply rounded-2xl border border-ink-700/60 bg-ink-850 shadow-card;
+  }
+
+  .eye-card-hover {
+    @apply transition-colors hover:border-eye-red/40;
+  }
+
+  .eye-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-eye-red/50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .eye-btn-primary {
+    @apply eye-btn bg-eye-red text-white hover:bg-eye-red-dark shadow-glow;
+  }
+  .eye-btn-ghost {
+    @apply eye-btn border border-ink-700 bg-transparent text-cloud-muted hover:border-eye-red/40 hover:text-cloud;
+  }
+  .eye-btn-soft {
+    @apply eye-btn bg-ink-750 text-cloud hover:bg-ink-700;
+  }
+
+  .eye-input {
+    @apply w-full rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-cloud placeholder:text-cloud-dim focus:border-eye-red/60 focus:outline-none focus:ring-1 focus:ring-eye-red/40;
+  }
+
+  .eye-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .eye-label {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-cloud-dim;
+  }
+
+  .eye-title {
+    @apply font-display font-extrabold tracking-tight text-cloud;
+  }
+
+  .hud-rings::before {
+    content: '';
+    @apply pointer-events-none absolute inset-0 rounded-2xl;
+    background: var(--tw-bg-red-fade, radial-gradient(120% 120% at 0% 0%, rgba(225, 29, 42, 0.1) 0%, rgba(225, 29, 42, 0) 45%));
+  }
+}
