@@ -1,7 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#0A0A0A"/>
-  <path d="M14 24c6-8 30-8 36 0" fill="none" stroke="#E11D2A" stroke-width="5" stroke-linecap="round"/>
-  <path d="M14 40c6 8 30 8 36 0" fill="none" stroke="#E11D2A" stroke-width="5" stroke-linecap="round"/>
-  <circle cx="32" cy="32" r="7" fill="#F5F5F7"/>
-  <circle cx="32" cy="32" r="3" fill="#E11D2A"/>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo escuro arredondado — visível em tabs claras e escuras -->
+  <rect width="100" height="100" rx="22" fill="#0F0F0F"/>
+  <!-- "eye" — grande, cinza claro -->
+  <text x="50" y="64" text-anchor="middle" fill="#D4D4D4"
+        font-family="Archivo, Inter, system-ui, sans-serif"
+        font-size="46" font-weight="700">eye</text>
+  <!-- Arco superior-esquerdo (diagonal) -->
+  <path d="M 8 58 C 4 26, 28 4, 62 8"
+        stroke="#E11D2A" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+  <!-- Arco inferior-direito (diagonal) -->
+  <path d="M 38 92 C 64 97, 94 76, 93 44"
+        stroke="#E11D2A" stroke-width="8.5" stroke-linecap="round" fill="none"/>
 </svg>

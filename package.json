@@ -27,5 +27,8 @@
     "typescript": "^5.2.2",
     "vite": "^4.5.3",
     "zustand": "^4.5.1"
+  },
+  "devDependencies": {
+    "jimp": "^0.22.12"
   }
 }

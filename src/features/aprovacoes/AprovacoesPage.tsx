@@ -9,6 +9,7 @@ import {
   Paperclip,
   CalendarClock,
   Building2,
+  Clock,
 } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, Avatar, EmptyState } from '@/components/ui';
 import {
@@ -16,6 +17,7 @@ import {
   prioridadeInfo,
   type Solicitacao,
   type Membro,
+  type TransicaoSLA,
 } from '@/services/backend';
 import { cn } from '@/lib/utils';
 import { fmt } from '@/lib/dates';
@@ -123,6 +125,12 @@ function ConfirmacaoCard({ solic, onResolvido }: { solic: Solicitacao; onResolvi
           <a href={`${API_ORIGIN}${entrega.url}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-eye-red hover:underline">
             <Paperclip className="h-4 w-4" /> Ver entrega: {entrega.nomeArquivo}
           </a>
+        </div>
+      )}
+      {/* SLA — tempo total em produção */}
+      {solic.sla && solic.sla.length > 0 && (
+        <div className="border-t border-ink-700/60 px-4 py-2">
+          <SlaTimeline sla={solic.sla} />
         </div>
       )}
       <div className="border-t border-ink-700/60 bg-ink-900/40 p-4">
@@ -256,5 +264,35 @@ function AprovacaoCard({ solic, equipe, onResolvido }: { solic: Solicitacao; equ
         )}
       </div>
     </Card>
+  );
+}
+
+function formatMinutes(min: number): string {
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h < 24) return `${h}h${m > 0 ? `${m}min` : ''}`;
+  const d = Math.floor(h / 24);
+  const hr = h % 24;
+  return `${d}d${hr > 0 ? `${hr}h` : ''}`;
+}
+
+function SlaTimeline({ sla }: { sla: TransicaoSLA[] }) {
+  const total = sla.reduce((acc, t) => acc + t.duracaoMinutos, 0);
+  return (
+    <div>
+      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-cloud-dim">
+        <Clock className="h-3 w-3" /> SLA · Total: {formatMinutes(total)}
+      </p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {sla.map((t) => (
+          <span key={t.id} className={cn('flex items-center gap-1 text-xs', t.emAndamento ? 'text-amber-400' : 'text-cloud-dim')}>
+            <span className={cn('h-1.5 w-1.5 rounded-full', t.emAndamento ? 'bg-amber-400' : 'bg-ink-600')} />
+            {t.status.replace(/_/g, ' ')}: <span className="font-medium text-cloud">{formatMinutes(t.duracaoMinutos)}</span>
+            {t.responsavelNome && <span className="text-cloud-dim">({t.responsavelNome})</span>}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

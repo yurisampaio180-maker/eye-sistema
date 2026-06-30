@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Inbox, Loader2, Play, Upload, FileText, Clock, Building2, Paperclip,
-  Image as ImageIcon, Video, ChevronDown, Check, Sparkles,
+  Image as ImageIcon, Video, ChevronDown, Check, Sparkles, MapPin, CalendarDays,
 } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, EmptyState } from '@/components/ui';
-import { backend, type Tarefa, type Solicitacao } from '@/services/backend';
+import { backend, type Tarefa, type Solicitacao, type PostAgenda } from '@/services/backend';
 import { useAuth } from '@/stores/auth';
 import { cn } from '@/lib/utils';
-import { fmt } from '@/lib/dates';
+import { fmt, time } from '@/lib/dates';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
 
@@ -26,12 +26,17 @@ export function MinhasDemandasPage() {
   const role = useAuth((s) => s.user?.role);
   const isVideo = role === 'videomaker';
   const [tarefas, setTarefas] = useState<Tarefa[] | null>(null);
+  const [filmagens, setFilmagens] = useState<PostAgenda[]>([]);
 
   async function carregar() {
     try {
-      const all = await backend.tarefas.list();
-      // FIFO: mais antigas primeiro (prioridade de fila)
-      setTarefas([...all].reverse());
+      const reqs: [Promise<Tarefa[]>, Promise<PostAgenda[]>] = [
+        backend.tarefas.list(),
+        isVideo ? backend.agenda.list() : Promise.resolve([]),
+      ];
+      const [all, agenda] = await Promise.all(reqs);
+      setTarefas([...all].reverse()); // FIFO: mais antigas primeiro
+      setFilmagens(agenda.filter((e) => e.tipo === 'evento').sort((a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime()));
     } catch { setTarefas([]); }
   }
   useEffect(() => {
@@ -45,8 +50,43 @@ export function MinhasDemandasPage() {
       <PageHeader
         icon={isVideo ? Video : ImageIcon}
         title={isVideo ? 'Minhas Gravações' : 'Minhas Demandas'}
-        subtitle={isVideo ? 'Fila de gravações destinadas a você (mais antigas primeiro)' : 'Fila de artes para produzir (mais antigas primeiro)'}
+        subtitle={isVideo ? 'Agenda de filmagens e fila de edições destinadas a você' : 'Fila de artes para produzir (mais antigas primeiro)'}
       />
+
+      {/* Agenda de filmagens (só videomaker) */}
+      {isVideo && (
+        <Card className="mb-5 p-4">
+          <h2 className="mb-3 flex items-center gap-2 font-display font-bold text-cloud">
+            <CalendarDays className="h-4 w-4 text-eye-red" /> Próximas filmagens
+          </h2>
+          {filmagens.length === 0 ? (
+            <p className="text-sm text-cloud-dim">Nenhuma filmagem agendada para você ainda.</p>
+          ) : (
+            <div className="space-y-2">
+              {filmagens.map((ev) => (
+                <div key={ev.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-2.5 text-sm">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-sky-400">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {fmt(ev.dataHora, 'EEE dd/MM')} às {time(ev.dataHora)}
+                  </span>
+                  <span className="min-w-0 flex-1 font-medium text-cloud truncate">{ev.titulo}</span>
+                  <span className="text-xs text-cloud-muted">{ev.clienteNome}</span>
+                  {ev.localEvento && (
+                    <span className="flex items-center gap-1 text-xs text-cloud-dim">
+                      <MapPin className="h-3 w-3" /> {ev.localEvento}
+                    </span>
+                  )}
+                  {new Date(ev.dataHora) < new Date() ? (
+                    <Badge className="bg-eye-red/15 text-eye-red">Passou</Badge>
+                  ) : (
+                    <Badge className="bg-sky-500/15 text-sky-400">Agendada</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {tarefas === null ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-6 w-6 animate-spin text-eye-red" /></div>
@@ -96,6 +136,7 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
           <p className="truncate font-medium text-cloud">{tarefa.titulo}</p>
           <p className="flex items-center gap-1 text-xs text-cloud-dim"><Building2 className="h-3 w-3" /> {tarefa.clienteNome}</p>
         </div>
+        <TempoComigo tarefa={tarefa} />
         <Badge className={pl.badge}>{pl.label}</Badge>
         <ChevronDown className={cn('h-4 w-4 text-cloud-dim transition-transform', aberto && 'rotate-180')} />
       </button>
@@ -145,6 +186,24 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
                 </Link>
               )}
 
+              {/* SLA — timeline de tempo */}
+              {solic.sla && solic.sla.length > 0 && (
+                <details className="rounded-xl border border-ink-700/50 p-3">
+                  <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-cloud"><Clock className="h-3.5 w-3.5 text-eye-red" /> Histórico de tempo por etapa</summary>
+                  <div className="mt-2 space-y-1">
+                    {solic.sla.map((t) => (
+                      <div key={t.id} className="flex items-center gap-2 text-xs">
+                        <span className={cn('h-2 w-2 rounded-full shrink-0', t.emAndamento ? 'bg-eye-red' : 'bg-ink-600')} />
+                        <span className="w-40 truncate text-cloud-muted">{t.status.replace(/_/g, ' ')}</span>
+                        <span className={cn('font-medium', t.emAndamento ? 'text-eye-red' : 'text-cloud-dim')}>{formatMinutes(t.duracaoMinutos)}</span>
+                        {t.responsavelNome && <span className="text-cloud-dim">— {t.responsavelNome}</span>}
+                        {t.emAndamento && <span className="ml-auto rounded-full bg-eye-red/15 px-2 py-0.5 text-eye-red">agora</span>}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
               {/* entrega já feita */}
               {tarefa.entregaUrl && (
                 <a href={`${API_ORIGIN}${tarefa.entregaUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400"><Check className="h-4 w-4" /> Entrega enviada</a>
@@ -174,5 +233,31 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
         </div>
       )}
     </Card>
+  );
+}
+
+function formatMinutes(min: number): string {
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h < 24) return `${h}h${m > 0 ? `${m}min` : ''}`;
+  const d = Math.floor(h / 24);
+  const hr = h % 24;
+  return `${d}d${hr > 0 ? `${hr}h` : ''}`;
+}
+
+function TempoComigo({ tarefa }: { tarefa: Tarefa }) {
+  const [min, setMin] = useState(() =>
+    Math.floor((Date.now() - new Date(tarefa.updatedAt).getTime()) / 60000)
+  );
+  useEffect(() => {
+    const id = setInterval(() => setMin((v) => v + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+  if (['ideia', 'roteiro', 'pronto'].includes(tarefa.statusProducao)) return null;
+  return (
+    <span className="flex items-center gap-1 text-[10px] text-cloud-dim">
+      <Clock className="h-3 w-3" /> {formatMinutes(min)}
+    </span>
   );
 }

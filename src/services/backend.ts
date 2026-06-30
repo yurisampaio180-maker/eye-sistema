@@ -71,6 +71,7 @@ export interface Solicitacao {
   anexos: Anexo[];
   historico: HistoricoItem[];
   tarefa: TarefaResumo | null;
+  sla?: TransicaoSLA[];
 }
 
 export interface NovaSolicitacao {
@@ -111,6 +112,8 @@ export interface Tarefa {
   entregaUrl: string | null;
   promptSugerido: string | null;
   legendaSugerida: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Membro {
@@ -122,12 +125,25 @@ export interface Membro {
 
 export type PostStatus = 'rascunho' | 'aguardando_confirmacao' | 'confirmado' | 'postado';
 
+export interface TransicaoSLA {
+  id: string;
+  status: string;
+  responsavelId: string | null;
+  responsavelNome: string | null;
+  iniciadoEm: string;
+  finalizadoEm: string | null;
+  duracaoMinutos: number;
+  emAndamento: boolean;
+}
+
 export interface PostAgenda {
   id: string;
   clienteId: string;
+  solicitacaoId: string | null;
   titulo: string;
   dataHora: string;
   plataforma: string | null;
+  tipo: string;
   status: PostStatus;
   legenda: string;
   imagemUrl: string | null;
@@ -135,6 +151,9 @@ export interface PostAgenda {
   criadoPorNome: string | null;
   postarPorNome: string | null;
   clienteNome: string | null;
+  responsavelId: string | null;
+  responsavelNome: string | null;
+  localEvento: string | null;
   atrasado: boolean;
 }
 
