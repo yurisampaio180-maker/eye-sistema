@@ -8,6 +8,7 @@ import { AprovacoesPage } from '@/features/aprovacoes/AprovacoesPage';
 import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
 import { MinhasDemandasPage } from '@/features/demandas/MinhasDemandasPage';
 import { AgendaFilmagensPage } from '@/features/agenda/AgendaFilmagensPage';
+import { GestorClientePanel } from '@/features/gestor/GestorClientePanel';
 import { RequireAuthed, ProtectedRoute, HomeRedirect } from '@/components/auth/Guards';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
@@ -44,6 +45,14 @@ export const router = createBrowserRouter([
       <RequireCliente>
         <PortalPage />
       </RequireCliente>
+    ),
+  },
+  {
+    path: '/painel-cliente',
+    element: (
+      <ProtectedRoute roles={['gestor_cliente']}>
+        <GestorClientePanel />
+      </ProtectedRoute>
     ),
   },
   {

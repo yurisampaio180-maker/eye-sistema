@@ -82,23 +82,25 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-5 border-t border-ink-700/60 pt-4">
-            <p className="eye-label mb-2">Acesso rápido (demo · senha eye123)</p>
-            <div className="flex flex-wrap gap-1.5">
-              {atalhos.map((a) => (
-                <button
-                  key={a.email}
-                  onClick={() => {
-                    setEmail(a.email);
-                    setPassword('eye123');
-                  }}
-                  className="rounded-lg border border-ink-700 px-2 py-1 text-[11px] text-cloud-muted transition-colors hover:border-eye-red/40 hover:text-cloud"
-                >
-                  {a.label}
-                </button>
-              ))}
+          {import.meta.env.DEV && (
+            <div className="mt-5 border-t border-ink-700/60 pt-4">
+              <p className="eye-label mb-2">Acesso rápido (demo · só em desenvolvimento)</p>
+              <div className="flex flex-wrap gap-1.5">
+                {atalhos.map((a) => (
+                  <button
+                    key={a.email}
+                    onClick={() => {
+                      setEmail(a.email);
+                      setPassword('eye123');
+                    }}
+                    className="rounded-lg border border-ink-700 px-2 py-1 text-[11px] text-cloud-muted transition-colors hover:border-eye-red/40 hover:text-cloud"
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

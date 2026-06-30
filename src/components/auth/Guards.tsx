@@ -32,16 +32,16 @@ export function RequireInternal({ children }: { children: ReactNode }) {
   const user = useAuth((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
   if (user.mustChangePassword) return <Navigate to="/trocar-senha" replace />;
-  if (!isInternal(user.role)) return <Navigate to="/portal" replace />;
+  if (!isInternal(user.role)) return <Navigate to={homeForRole(user.role)} replace />;
   return <>{children}</>;
 }
 
-/** Exige papel cliente (solicitante). Internos vão para o dashboard. */
+/** Exige papel cliente (solicitante). Os demais vão para a sua tela inicial. */
 export function RequireCliente({ children }: { children: ReactNode }) {
   const user = useAuth((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
   if (user.mustChangePassword) return <Navigate to="/trocar-senha" replace />;
-  if (user.role !== 'cliente') return <Navigate to="/" replace />;
+  if (user.role !== 'cliente') return <Navigate to={homeForRole(user.role)} replace />;
   return <>{children}</>;
 }
 

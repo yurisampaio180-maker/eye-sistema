@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api, tokenStore } from '@/services/apiClient';
 
-export type Role = 'ceo' | 'cliente' | 'social' | 'designer_governo' | 'videomaker';
+export type Role = 'ceo' | 'cliente' | 'gestor_cliente' | 'social' | 'designer_governo' | 'videomaker';
 
 export interface SessionUser {
   id: string;
@@ -20,6 +20,7 @@ export const roleLabel: Record<Role, string> = {
   designer_governo: 'Designer · Governo',
   videomaker: 'Videomaker',
   cliente: 'Solicitante',
+  gestor_cliente: 'Gestor do Cliente',
 };
 
 interface AuthState {
@@ -63,13 +64,14 @@ export const useAuth = create<AuthState>((set) => ({
 export const isInternal = (role?: Role) =>
   role === 'ceo' || role === 'social' || role === 'designer_governo' || role === 'videomaker';
 
-/** tela inicial de cada papel (Problema 2). */
+/** tela inicial de cada papel. */
 export function homeForRole(role?: Role): string {
   switch (role) {
     case 'ceo': return '/';
     case 'social': return '/agenda-filmagens';
     case 'designer_governo':
     case 'videomaker': return '/minhas-demandas';
+    case 'gestor_cliente': return '/painel-cliente';
     case 'cliente': return '/minhas-solicitacoes';
     default: return '/login';
   }
