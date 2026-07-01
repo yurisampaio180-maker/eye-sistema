@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   UserCog,
   Inbox,
+  Bot,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ const nav: NavItem[] = [
   { to: '/clientes', label: 'Clientes', icon: Users, roles: ['ceo', 'social', 'videomaker'] },
   { to: '/clientes/governo-moraujo', label: 'Governo (Criar IA)', icon: Sparkles, roles: ['designer_governo'] },
   { to: '/calendario', label: 'Calendário', icon: CalendarDays, roles: ['ceo'] },
+  { to: '/motor', label: 'Motor de Marketing', icon: Bot, roles: ['ceo'] },
   { to: '/conteudo', label: 'Conteúdo IA', icon: Sparkles, roles: ['ceo', 'social', 'videomaker'] },
   { to: '/trafego', label: 'Tráfego Pago', icon: Megaphone, roles: ['ceo'] },
   { to: '/videos', label: 'Produção', icon: Clapperboard, roles: ['ceo', 'social', 'videomaker'] },

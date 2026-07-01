@@ -155,6 +155,7 @@ export interface PostAgenda {
   responsavelNome: string | null;
   localEvento: string | null;
   atrasado: boolean;
+  geradoPorIA?: number;
 }
 
 export interface NovoPost {
@@ -250,6 +251,17 @@ export const backend = {
     create: (body: NovoUsuario) => api.post<{ id: string }>('/users', body),
     toggle: (id: string, ativo: boolean) => api.patch<{ ok: boolean }>(`/users/${id}`, { ativo }),
   },
+  motor: {
+    gerar: (clienteId: string, mes?: string) =>
+      api.post<{ geracaoId: string; mensagem: string }>(
+        `/motor/gerar/${clienteId}${mes ? `?mes=${mes}` : ''}`,
+      ),
+    status: (geracaoId: string) =>
+      api.get<GeracaoMarketing>(`/motor/status/${geracaoId}`),
+    historico: (clienteId: string) =>
+      api.get<GeracaoMarketing[]>(`/motor/historico/${clienteId}`),
+    ativas: () => api.get<GeracaoMarketing[]>('/motor/ativas'),
+  },
   trocarSenha: (senhaAtual: string, novaSenha: string) =>
     api.post<{ ok: boolean }>('/auth/change-password', { senhaAtual, novaSenha }),
 };
@@ -294,6 +306,20 @@ export interface InstagramStatus {
 
 export interface InstagramStatusCliente extends InstagramStatus {
   clienteId: string;
+}
+
+export type GeracaoStatus = 'processando' | 'concluido' | 'erro';
+
+export interface GeracaoMarketing {
+  id: string;
+  clienteId: string;
+  mes: string;
+  status: GeracaoStatus;
+  totalItens: number;
+  itensGerados: number;
+  erros: number;
+  iniciadoEm: string;
+  concluidoEm: string | null;
 }
 
 export interface NovoUsuario {

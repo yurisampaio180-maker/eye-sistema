@@ -65,6 +65,33 @@ export const useInstagramTodos = () =>
     staleTime: 5 * 60 * 1000,
   });
 
+// Agenda real (EventoAgenda do backend — substitui mock postsApi no Calendário)
+export const useAgendaEvents = (clienteId?: string) =>
+  useQuery({
+    queryKey: ['agenda-events', clienteId ?? 'all'],
+    queryFn: () => backend.agenda.list(clienteId),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+
+export const useMotorHistorico = (clienteId: string) =>
+  useQuery({
+    queryKey: ['motor-historico', clienteId],
+    queryFn: () => backend.motor.historico(clienteId),
+    staleTime: 30_000,
+  });
+
+export const useMotorStatus = (geracaoId: string | null) =>
+  useQuery({
+    queryKey: ['motor-status', geracaoId],
+    queryFn: () => backend.motor.status(geracaoId!),
+    enabled: Boolean(geracaoId),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.status === 'processando' ? 4_000 : false;
+    },
+  });
+
 export function useUpdateVideoStage() {
   const qc = useQueryClient();
   return useMutation({
