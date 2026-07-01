@@ -552,7 +552,7 @@ function SlideCard({
 }) {
   const [imagemUrl, setImagemUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<{ texto: string; acao: string } | null>(null);
   const [refineMode, setRefineMode] = useState(false);
   const [refineText, setRefineText] = useState('');
 
@@ -576,21 +576,38 @@ function SlideCard({
       setRefineText('');
     } catch (e: any) {
       // Mensagens de erro amigáveis por código
-      const msg: string = e.message ?? 'Erro desconhecido.';
-      const msgL = msg.toLowerCase();
-      if (msgL.includes('incorrect api key') || msgL.includes('invalid_api_key') || msgL.includes('401') || msgL.includes('authentication')) {
-        setErro('Chave da OpenAI inválida. Atualize OPENAI_API_KEY no Render e faça redeploy.');
-      } else if (msgL.includes('não configurada') || msgL.includes('openai_api_key')) {
-        setErro('Chave da OpenAI não configurada no servidor. Adicione OPENAI_API_KEY no Render.');
-      } else if (e.status === 429 || msgL.includes('rate limit') || msgL.includes('quota')) {
-        setErro('Limite de uso da OpenAI atingido. Verifique créditos em platform.openai.com ou aguarde.');
-      } else if (msgL.includes('reject') || msgL.includes('violat') || msgL.includes('safety')) {
-        setErro('O prompt foi rejeitado pelo filtro de conteúdo da OpenAI. Tente reformular.');
-      } else if (e.status === 408 || msgL.includes('timeout')) {
-        setErro('A geração demorou muito. Tente novamente.');
-      } else {
-        setErro(`Erro ao gerar: ${msg}`);
-      }
+      const ERROS: Record<string, { texto: string; acao: string }> = {
+        OPENAI_BILLING_LIMIT: {
+          texto: 'Créditos de IA esgotados.',
+          acao: 'Acesse platform.openai.com → Billing → Add to credit balance.',
+        },
+        OPENAI_AUTH_ERROR: {
+          texto: 'Chave da OpenAI inválida ou revogada.',
+          acao: 'Atualize OPENAI_API_KEY no Render e faça redeploy.',
+        },
+        OPENAI_ACCESS_DENIED: {
+          texto: 'Conta OpenAI sem acesso à geração de imagens.',
+          acao: 'Configure um método de pagamento em platform.openai.com.',
+        },
+        OPENAI_CONTENT_REJECTED: {
+          texto: 'Prompt rejeitado pelos filtros de segurança da OpenAI.',
+          acao: 'Reformule o contexto e tente novamente.',
+        },
+        OPENAI_RATE_LIMIT: {
+          texto: 'Muitas gerações em sequência.',
+          acao: 'Aguarde 1 minuto e tente novamente.',
+        },
+        OPENAI_UNAVAILABLE: {
+          texto: 'Serviço de IA temporariamente indisponível.',
+          acao: 'Tente novamente em alguns minutos.',
+        },
+      };
+      setErro(
+        ERROS[e.code as string] ?? {
+          texto: 'Erro ao gerar imagem.',
+          acao: e.message ?? 'Tente novamente ou contate o suporte.',
+        }
+      );
     } finally {
       setLoading(false);
     }
@@ -671,9 +688,12 @@ function SlideCard({
 
           {/* Erro */}
           {erro && (
-            <p className="flex items-start gap-1.5 rounded-lg border border-eye-red/30 bg-eye-red/5 px-2 py-1.5 text-xs text-eye-red">
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {erro}
-            </p>
+            <div className="rounded-xl border border-eye-red/30 bg-eye-red/5 px-3 py-2.5 text-xs">
+              <p className="flex items-start gap-1.5 font-medium text-eye-red">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {erro.texto}
+              </p>
+              <p className="mt-0.5 pl-4.5 text-eye-red/70">{erro.acao}</p>
+            </div>
           )}
 
           {/* Botão principal */}
