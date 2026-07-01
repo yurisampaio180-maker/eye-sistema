@@ -223,6 +223,10 @@ export const backend = {
     devolver: (id: string, motivo: string) => api.post<PostAgenda>(`/agenda/${id}/devolver`, { motivo }),
     postar: (id: string) => api.post<PostAgenda>(`/agenda/${id}/postar`),
   },
+  ia: {
+    gerarImagem: (form: FormData) =>
+      api.upload<{ imagemUrl: string; modeloUsado: string; geradoEm: string }>('/ia/gerar-imagem', form),
+  },
   equipe: () => api.get<Membro[]>('/equipe'),
   clientes: () => api.get<{ id: string; nome: string; corPrimaria: string }[]>('/clientes'),
   unidades: (clienteId: string) => api.get<Unidade[]>(`/clientes/${clienteId}/unidades`),

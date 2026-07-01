@@ -12,13 +12,18 @@ import {
   Dna,
   Lock,
   CalendarPlus,
+  Download,
+  RefreshCw,
+  Paperclip,
+  X,
 } from 'lucide-react';
 import { useClients } from '@/hooks/queries';
 import { clientById } from '@/data/clients';
 import { Card, PageHeader, Button, Badge } from '@/components/ui';
 import { NovoPostModal } from '@/features/clientes/ClienteCalendario';
 import { cn } from '@/lib/utils';
-import { generateImage, generateVideoScript, openaiConfigured } from '@/services/integrations/openai';
+import { generateVideoScript } from '@/services/integrations/openai';
+import { backend } from '@/services/backend';
 import { dnaByClient } from './data/clientesDNA';
 import { frameworks, frameworkList } from './data/frameworks';
 import { generate, toClipboardText, formatLabel } from './engine';
@@ -52,19 +57,7 @@ export function ConteudoPage() {
       <PageHeader
         icon={Sparkles}
         title="Motor de Criação · IA"
-        subtitle="DNA do cliente + framework de copy → prompt DALL·E 3 nível diretor de arte"
-        actions={
-          <Badge
-            className={cn(
-              openaiConfigured
-                ? 'bg-emerald-500/15 text-emerald-400'
-                : 'bg-amber-500/15 text-amber-400'
-            )}
-            dot={openaiConfigured ? 'bg-emerald-400' : 'bg-amber-400'}
-          >
-            {openaiConfigured ? 'OpenAI conectada' : 'Modo demonstração'}
-          </Badge>
-        }
+        subtitle="DNA do cliente + framework de copy → prompt gerado com gpt-image-1"
       />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -161,12 +154,35 @@ function Motor({ clienteId }: { clienteId: string }) {
   const [slidesCarrossel, setSlides] = useState(3);
   const [briefing, setBriefing] = useState('');
   const [result, setResult] = useState<GeneratedContent | null>(null);
+  const [referenciaFile, setReferenciaFile] = useState<File | null>(null);
+  const [referenciaPreview, setReferenciaPreview] = useState<string | null>(null);
 
   const blocked = !dna.configurado;
 
   function run() {
     const r = generate({ clienteId, formato, objetivo, framework, briefing, slidesCarrossel });
     setResult(r);
+  }
+
+  function handleRefFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { alert('Arquivo muito grande. Máx 20MB.'); return; }
+    setReferenciaFile(file);
+    setReferenciaPreview(URL.createObjectURL(file));
+    e.target.value = '';
+  }
+
+  function removerRef() {
+    setReferenciaFile(null);
+    if (referenciaPreview) URL.revokeObjectURL(referenciaPreview);
+    setReferenciaPreview(null);
+  }
+
+  function onUsarComoRef(file: File, preview: string) {
+    if (referenciaPreview) URL.revokeObjectURL(referenciaPreview);
+    setReferenciaFile(file);
+    setReferenciaPreview(preview);
   }
 
   return (
@@ -249,6 +265,31 @@ function Motor({ clienteId }: { clienteId: string }) {
             onChange={(e) => setBriefing(e.target.value)}
           />
 
+          {/* Imagem de referência */}
+          <p className="eye-label mb-2 mt-4">
+            Imagem de referência <span className="font-normal text-cloud-dim">(opcional)</span>
+          </p>
+          {referenciaPreview ? (
+            <div className="relative">
+              <img src={referenciaPreview} alt="Referência" className="h-24 w-full rounded-xl border border-ink-700 object-cover" />
+              <button
+                onClick={removerRef}
+                className="absolute right-1.5 top-1.5 rounded-full bg-ink-950/80 p-1 text-cloud-muted hover:text-eye-red"
+              >
+                <X className="h-3 w-3" />
+              </button>
+              <p className="mt-1 text-[10px] text-cloud-dim">Referência ativa — usada em todas as gerações desta sessão</p>
+            </div>
+          ) : (
+            <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-dashed border-ink-700 py-4 text-xs text-cloud-dim transition-colors hover:border-ink-500 hover:text-cloud-muted">
+              <Paperclip className="h-4 w-4" />
+              Arraste ou clique para selecionar
+              <span className="text-[10px]">JPG, PNG, WebP · máx 20MB</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleRefFile} />
+            </label>
+          )}
+          <p className="mt-1 text-[10px] text-cloud-dim">Dica: arte anterior, foto do produto, rascunho ou estilo de referência.</p>
+
           <Button className="mt-4 w-full" onClick={run} disabled={blocked}>
             {blocked ? <Lock className="h-4 w-4" /> : <Wand2 className="h-4 w-4" />}
             {blocked ? 'DNA não configurado' : 'Gerar prompt + copy'}
@@ -269,7 +310,12 @@ function Motor({ clienteId }: { clienteId: string }) {
             </div>
           </Card>
         ) : (
-          <ResultView result={result} />
+          <ResultView
+            result={result}
+            formato={formato}
+            referenciaFile={referenciaFile}
+            onUsarComoRef={onUsarComoRef}
+          />
         )}
       </div>
     </div>
@@ -349,7 +395,17 @@ function DNAField({ label, value }: { label: string; value: string }) {
 }
 
 // ---------- Resultado ----------
-function ResultView({ result }: { result: GeneratedContent }) {
+function ResultView({
+  result,
+  formato,
+  referenciaFile,
+  onUsarComoRef,
+}: {
+  result: GeneratedContent;
+  formato: ContentFormat;
+  referenciaFile: File | null;
+  onUsarComoRef: (file: File, preview: string) => void;
+}) {
   const bloqueios = result.issues.filter((i) => i.nivel === 'bloqueio');
   const okCount = result.checklist.filter((c) => c.ok).length;
   const [addCal, setAddCal] = useState(false);
@@ -457,7 +513,14 @@ function ResultView({ result }: { result: GeneratedContent }) {
       </div>
       <div className="space-y-4">
         {result.slides.map((slide) => (
-          <SlideCard key={slide.indice} slide={slide} clienteId={result.clienteId} />
+          <SlideCard
+            key={slide.indice}
+            slide={slide}
+            clienteId={result.clienteId}
+            formato={formato}
+            referenciaFile={referenciaFile}
+            onUsarComoRef={onUsarComoRef}
+          />
         ))}
       </div>
     </div>
@@ -465,23 +528,99 @@ function ResultView({ result }: { result: GeneratedContent }) {
 }
 
 // ---------- Card de slide com prompt ----------
-function SlideCard({ slide, clienteId }: { slide: PromptSlide; clienteId: string }) {
-  const [img, setImg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
 
-  async function gerarImagem() {
-    const client = clientById(clienteId);
-    if (!client) return;
+const FORMATO_MAP: Record<string, string> = {
+  feed: 'feed',
+  stories: 'stories',
+  carrossel: 'carrossel_slide',
+  reels_thumb: 'feed',
+};
+
+function SlideCard({
+  slide,
+  clienteId,
+  formato,
+  referenciaFile,
+  onUsarComoRef,
+}: {
+  slide: PromptSlide;
+  clienteId: string;
+  formato: ContentFormat;
+  referenciaFile: File | null;
+  onUsarComoRef: (file: File, preview: string) => void;
+}) {
+  const [imagemUrl, setImagemUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [refineMode, setRefineMode] = useState(false);
+  const [refineText, setRefineText] = useState('');
+
+  async function gerar(promptExtra?: string) {
     setLoading(true);
-    const r = await generateImage(client, slide.raw);
-    setImg(r.imageUrl);
-    setLoading(false);
+    setErro(null);
+    try {
+      const promptFinal = promptExtra
+        ? `${slide.raw}\n\nRefinamento solicitado: ${promptExtra}`
+        : slide.raw;
+
+      const form = new FormData();
+      form.append('promptTecnico', promptFinal);
+      form.append('clienteId', clienteId);
+      form.append('formato', FORMATO_MAP[formato] ?? 'feed');
+      if (referenciaFile) form.append('referencia', referenciaFile);
+
+      const res = await backend.ia.gerarImagem(form);
+      setImagemUrl(res.imagemUrl);
+      setRefineMode(false);
+      setRefineText('');
+    } catch (e: any) {
+      // Mensagens de erro amigáveis por código
+      const msg: string = e.message ?? 'Erro desconhecido.';
+      if (msg.includes('OPENAI_API_KEY') || msg.includes('não configurada')) {
+        setErro('Chave da OpenAI não configurada no servidor. Contate o administrador.');
+      } else if (e.status === 429) {
+        setErro('Limite de gerações atingido. Aguarde alguns minutos e tente novamente.');
+      } else if (msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('violat')) {
+        setErro('O prompt foi rejeitado pela OpenAI. Tente reformular o contexto.');
+      } else if (e.status === 408 || msg.toLowerCase().includes('timeout')) {
+        setErro('A geração demorou muito. Tente novamente.');
+      } else {
+        setErro(`Erro ao gerar: ${msg}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function baixar() {
+    if (!imagemUrl) return;
+    const a = document.createElement('a');
+    a.href = `${API_ORIGIN}${imagemUrl}`;
+    a.download = `eye-slide-${slide.indice + 1}.webp`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  async function usarComoRef() {
+    if (!imagemUrl) return;
+    try {
+      const res = await fetch(`${API_ORIGIN}${imagemUrl}`);
+      const blob = await res.blob();
+      const file = new File([blob], `referencia-gerada-${slide.indice + 1}.webp`, { type: 'image/webp' });
+      const preview = URL.createObjectURL(file);
+      onUsarComoRef(file, preview);
+    } catch {
+      // Ignora — usuário pode usar o upload manual
+    }
   }
 
   const isCarrossel = slide.sections[0].conteudo.includes('Part');
 
   return (
     <Card className="overflow-hidden">
+      {/* Cabeçalho */}
       <div className="flex items-center justify-between border-b border-ink-700/60 bg-ink-900/50 px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Badge className="bg-eye-red/15 text-eye-red">
@@ -495,30 +634,100 @@ function SlideCard({ slide, clienteId }: { slide: PromptSlide; clienteId: string
       </div>
 
       <div className="grid gap-4 p-4 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <div className="space-y-2.5">
-            {slide.sections.map((s) => (
-              <div key={s.id}>
-                <p className="text-[11px] font-bold text-eye-red">{s.titulo}</p>
-                <p className="whitespace-pre-line text-xs leading-relaxed text-cloud-muted">
-                  {s.conteudo}
+        {/* Seções do prompt */}
+        <div className="space-y-2.5 md:col-span-2">
+          {slide.sections.map((s) => (
+            <div key={s.id}>
+              <p className="text-[11px] font-bold text-eye-red">{s.titulo}</p>
+              <p className="whitespace-pre-line text-xs leading-relaxed text-cloud-muted">{s.conteudo}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Coluna de imagem */}
+        <div className="flex flex-col gap-2">
+          {/* Preview */}
+          <div className="relative min-h-[180px] flex-1 overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+            {imagemUrl ? (
+              <img src={`${API_ORIGIN}${imagemUrl}`} alt="Arte gerada" className="h-full w-full object-cover" />
+            ) : (
+              <div className="grid h-full min-h-[180px] place-items-center">
+                <ImageIcon className="h-8 w-8 text-cloud-dim" />
+              </div>
+            )}
+            {/* Overlay de loading */}
+            {loading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink-950/85 text-center">
+                <Loader2 className="h-7 w-7 animate-spin text-eye-red" />
+                <p className="text-xs text-cloud-muted">
+                  Gerando com IA…<br />pode levar até 30s
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <div className="grid flex-1 place-items-center overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
-            {img ? (
-              <img src={img} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <ImageIcon className="h-8 w-8 text-cloud-dim" />
             )}
           </div>
-          <Button variant="soft" className="mt-2" onClick={gerarImagem} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-            Gerar imagem
+
+          {/* Erro */}
+          {erro && (
+            <p className="flex items-start gap-1.5 rounded-lg border border-eye-red/30 bg-eye-red/5 px-2 py-1.5 text-xs text-eye-red">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {erro}
+            </p>
+          )}
+
+          {/* Botão principal */}
+          <Button variant="soft" onClick={() => gerar()} disabled={loading}>
+            {loading
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <ImageIcon className="h-4 w-4" />}
+            {imagemUrl ? 'Nova versão' : 'Gerar imagem'}
           </Button>
+
+          {/* Ações pós-geração */}
+          {imagemUrl && !loading && (
+            refineMode ? (
+              <div className="space-y-1.5">
+                <input
+                  autoFocus
+                  className="eye-input py-1.5 text-xs"
+                  placeholder="Ex.: coloca o produto em destaque, escurece o fundo…"
+                  value={refineText}
+                  onChange={(e) => setRefineText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && refineText.trim() && gerar(refineText)}
+                />
+                <div className="flex gap-1">
+                  <Button
+                    className="flex-1 py-1.5 text-xs"
+                    disabled={!refineText.trim()}
+                    onClick={() => gerar(refineText)}
+                  >
+                    <Wand2 className="h-3 w-3" /> Refinar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="py-1.5 text-xs"
+                    onClick={() => { setRefineMode(false); setRefineText(''); }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1">
+                <Button variant="ghost" className="py-1.5 text-xs" onClick={() => setRefineMode(true)}>
+                  <Wand2 className="h-3 w-3" /> Refinar
+                </Button>
+                <Button variant="ghost" className="py-1.5 text-xs" onClick={baixar}>
+                  <Download className="h-3 w-3" /> Baixar
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="col-span-2 py-1.5 text-xs"
+                  onClick={usarComoRef}
+                >
+                  <RefreshCw className="h-3 w-3" /> Usar como referência
+                </Button>
+              </div>
+            )
+          )}
         </div>
       </div>
     </Card>
