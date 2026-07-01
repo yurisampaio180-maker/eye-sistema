@@ -227,6 +227,16 @@ export const backend = {
     gerarImagem: (form: FormData) =>
       api.upload<{ imagemUrl: string; modeloUsado: string; geradoEm: string }>('/ia/gerar-imagem', form),
   },
+  instagram: {
+    url: (clienteId: string) =>
+      api.get<{ url: string }>(`/instagram/url/${clienteId}`),
+    metricas: (clienteId: string) =>
+      api.get<InstagramStatus>(`/instagram/metricas/${clienteId}`),
+    metricasTodos: () =>
+      api.get<InstagramStatusCliente[]>('/instagram/metricas'),
+    sincronizar: (clienteId: string) =>
+      api.post<InstagramStatus>(`/instagram/sincronizar/${clienteId}`),
+  },
   equipe: () => api.get<Membro[]>('/equipe'),
   clientes: () => api.get<{ id: string; nome: string; corPrimaria: string }[]>('/clientes'),
   unidades: (clienteId: string) => api.get<Unidade[]>(`/clientes/${clienteId}/unidades`),
@@ -262,6 +272,28 @@ export interface UsuarioAdmin {
   unidadeNome: string | null;
   ativo: number;
   mustChangePassword: number;
+}
+
+export interface InstagramMetrica {
+  seguidores: number;
+  seguindo: number;
+  totalPosts: number;
+  alcanceSemana: number | null;
+  impressoesSem: number | null;
+  visitasPerfil: number | null;
+  coletadoEm: string;
+}
+
+export interface InstagramStatus {
+  conectado: boolean;
+  username: string | null;
+  tokenExpiraEm: string | null;
+  ultimaSincEm: string | null;
+  metrica: InstagramMetrica | null;
+}
+
+export interface InstagramStatusCliente extends InstagramStatus {
+  clienteId: string;
 }
 
 export interface NovoUsuario {

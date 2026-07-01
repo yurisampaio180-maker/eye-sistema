@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, ArrowUpRight, Megaphone, ListChecks } from 'lucide-react';
-import { useClients } from '@/hooks/queries';
+import { useClients, useInstagramTodos } from '@/hooks/queries';
 import { Card, PageHeader, Badge, Skeleton } from '@/components/ui';
 import { clientStatusConfig, platformLabel } from '@/lib/status';
-import { compact, pct, sum } from '@/lib/utils';
+import { compact, pct } from '@/lib/utils';
 
 const serviceLabel: Record<string, string> = {
   conteudo: 'Conteúdo',
@@ -15,6 +16,11 @@ const serviceLabel: Record<string, string> = {
 
 export function ClientesPage() {
   const { data: clients, isLoading } = useClients();
+  const { data: igTodos } = useInstagramTodos();
+  const igMap = useMemo(
+    () => Object.fromEntries((igTodos ?? []).map((m) => [m.clienteId, m])),
+    [igTodos]
+  );
 
   return (
     <div>
@@ -34,16 +40,15 @@ export function ClientesPage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {clients.map((c) => {
             const st = clientStatusConfig[c.status];
-            const views = sum(c.profiles.map((p) => p.weeklyViews.at(-1) ?? 0));
+            const ig = igMap[c.id];
+            const seguidores = ig?.metrica?.seguidores ?? null;
+            const alcance    = ig?.metrica?.alcanceSemana ?? null;
             return (
               <Link key={c.id} to={`/clientes/${c.id}`}>
                 <Card hover className="group relative overflow-hidden">
-                  {/* faixa com a cor da marca */}
                   <div
                     className="h-20 w-full"
-                    style={{
-                      background: `linear-gradient(135deg, ${c.brand.primary}, ${c.brand.secondary})`,
-                    }}
+                    style={{ background: `linear-gradient(135deg, ${c.brand.primary}, ${c.brand.secondary})` }}
                   />
                   <div className="-mt-8 px-5 pb-5">
                     <div className="flex items-end justify-between">
@@ -64,19 +69,16 @@ export function ClientesPage() {
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {c.services.map((s) => (
-                        <span
-                          key={s}
-                          className="rounded-md bg-ink-800 px-2 py-0.5 text-[10px] font-medium text-cloud-muted"
-                        >
+                        <span key={s} className="rounded-md bg-ink-800 px-2 py-0.5 text-[10px] font-medium text-cloud-muted">
                           {serviceLabel[s]}
                         </span>
                       ))}
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2 border-t border-ink-700/50 pt-3 text-center">
-                      <Metric label="Views/sem" value={compact(views)} />
+                      <Metric label="Seguidores" value={seguidores !== null ? compact(seguidores) : '—'} />
+                      <Metric label="Alcance/sem" value={alcance !== null ? compact(alcance) : '—'} />
                       <Metric label="Entrega" value={pct(c.deliveryRate)} />
-                      <Metric label="Campanhas" value={String(c.activeCampaigns)} />
                     </div>
 
                     <div className="mt-3 flex items-center gap-3 text-xs text-cloud-dim">
@@ -90,7 +92,10 @@ export function ClientesPage() {
                           <Megaphone className="h-3.5 w-3.5" /> {c.activeCampaigns} ativa(s)
                         </span>
                       )}
-                      <span className="ml-auto">{platformLabel[c.profiles[0].platform]}</span>
+                      {ig?.conectado
+                        ? <span className="ml-auto text-emerald-500">● {ig.username}</span>
+                        : <span className="ml-auto text-amber-500">● não conectado</span>
+                      }
                     </div>
                   </div>
                 </Card>

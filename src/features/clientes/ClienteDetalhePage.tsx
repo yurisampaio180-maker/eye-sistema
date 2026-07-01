@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/stores/auth';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Palette, Megaphone, Calendar, Sparkles, MessageSquareQuote,
   LayoutDashboard, Clapperboard, Inbox, Settings, Clock, Loader2,
+  Instagram, RefreshCw, AlertCircle,
 } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { useClient, usePosts, useCampaigns, useVideos } from '@/hooks/queries';
+import { useClient, usePosts, useCampaigns, useVideos, useInstagramMetricas } from '@/hooks/queries';
 import { Card, Badge, Skeleton } from '@/components/ui';
 import { clientStatusConfig, postStatusConfig, platformLabel, videoStageConfig, videoStageOrder } from '@/lib/status';
 import { compact, brl, pct, cn } from '@/lib/utils';
@@ -16,6 +17,7 @@ import { ClienteCalendario } from './ClienteCalendario';
 import { dnaByClient } from '@/features/conteudo/data/clientesDNA';
 import { frameworks } from '@/features/conteudo/data/frameworks';
 import { backend, solicStatusInfo, type Solicitacao } from '@/services/backend';
+import type { InstagramStatus } from '@/services/backend';
 
 type AbaId = 'visao' | 'calendario' | 'ia' | 'videos' | 'solicitacoes' | 'trafego' | 'config';
 
@@ -33,7 +35,26 @@ export function ClienteDetalhePage() {
   const { id = '' } = useParams();
   const role = useAuth((s) => s.user?.role);
   const { data: client, isLoading } = useClient(id);
+  const { data: igData, refetch: refetchIg } = useInstagramMetricas(id);
   const [aba, setAba] = useState<AbaId>('visao');
+  const [searchParams] = useSearchParams();
+  const qc = useQueryClient();
+  const [igMsg, setIgMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
+
+  useEffect(() => {
+    const ig = searchParams.get('instagram');
+    if (!ig) return;
+    if (ig === 'conectado') {
+      setIgMsg({ tipo: 'ok', texto: 'Instagram conectado com sucesso!' });
+      qc.invalidateQueries({ queryKey: ['instagram', id] });
+      qc.invalidateQueries({ queryKey: ['instagram-todos'] });
+    } else if (ig === 'erro') {
+      const msg = searchParams.get('msg') ?? 'Erro ao conectar Instagram.';
+      setIgMsg({ tipo: 'erro', texto: decodeURIComponent(msg) });
+    }
+    // limpar da URL
+    window.history.replaceState({}, '', `/clientes/${id}`);
+  }, []);
 
   // Designer do Governo só acessa o perfil do Governo Municipal
   if (role === 'designer_governo' && id !== 'governo-moraujo') return <Navigate to="/minhas-demandas" replace />;
@@ -87,8 +108,21 @@ export function ClienteDetalhePage() {
         ))}
       </div>
 
+      {igMsg && (
+        <div className={cn(
+          'flex items-start gap-2 rounded-xl border px-4 py-3 text-sm',
+          igMsg.tipo === 'ok'
+            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+            : 'border-eye-red/30 bg-eye-red/5 text-eye-red'
+        )}>
+          {igMsg.tipo === 'ok' ? <Instagram className="h-4 w-4 shrink-0 mt-0.5" /> : <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+          <span>{igMsg.texto}</span>
+          <button className="ml-auto text-xs opacity-60 hover:opacity-100" onClick={() => setIgMsg(null)}>✕</button>
+        </div>
+      )}
+
       <div className="animate-fade-in">
-        {aba === 'visao' && <VisaoGeral id={id} client={client} />}
+        {aba === 'visao' && <VisaoGeral id={id} client={client} igData={igData} role={role} />}
         {aba === 'calendario' && <ClienteCalendario clienteId={id} primary={client.brand.primary} />}
         {aba === 'ia' && <ClienteCriarIA clienteId={id} />}
         {aba === 'videos' && <VideosCliente id={id} />}
@@ -101,43 +135,85 @@ export function ClienteDetalhePage() {
 }
 
 // ---------- Visão Geral ----------
-function VisaoGeral({ id, client }: { id: string; client: any }) {
+function VisaoGeral({ id, client, igData, role }: { id: string; client: any; igData: InstagramStatus | undefined; role: string | undefined }) {
   const { data: posts } = usePosts();
   const { data: campaigns } = useCampaigns();
   const clientPosts = (posts ?? []).filter((p: any) => p.clientId === id);
   const clientCampaigns = (campaigns ?? []).filter((c: any) => c.clientId === id);
-  const chartData = client.profiles[0].weeklyViews.map((_: number, i: number) => ({
-    week: `S${i + 1}`,
-    views: client.profiles.reduce((a: number, p: any) => a + (p.weeklyViews[i] ?? 0), 0),
-  }));
-  const followers = client.profiles.reduce((a: number, p: any) => a + p.followers, 0);
+
+  const seguidores  = igData?.metrica?.seguidores ?? null;
+  const alcance     = igData?.metrica?.alcanceSemana ?? null;
+  const visitasPerfil = igData?.metrica?.visitasPerfil ?? null;
+  const conectado   = igData?.conectado ?? false;
+
+  const [connecting, setConnecting] = useState(false);
+
+  async function conectarInstagram() {
+    setConnecting(true);
+    try {
+      const { url } = await backend.instagram.url(id);
+      window.location.href = url;
+    } catch {
+      setConnecting(false);
+    }
+  }
+
+  async function sincronizar() {
+    try {
+      await backend.instagram.sincronizar(id);
+    } catch { /* silencioso */ }
+  }
 
   return (
     <div className="space-y-5">
+      {/* Métricas Instagram */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Mini label="Seguidores" value={compact(followers)} />
-        <Mini label="Views/semana" value={compact(client.profiles.reduce((a: number, p: any) => a + (p.weeklyViews.at(-1) ?? 0), 0))} />
-        <Mini label="Entrega" value={pct(client.deliveryRate)} />
+        <Mini label="Seguidores" value={seguidores !== null ? compact(seguidores) : '—'} />
+        <Mini label="Alcance/sem" value={alcance !== null ? compact(alcance) : '—'} />
+        <Mini label="Visitas perfil" value={visitasPerfil !== null ? compact(visitasPerfil) : '—'} />
         <Mini label="Campanhas" value={String(clientCampaigns.length)} />
       </div>
-      <Card className="p-4 sm:p-5">
-        <h2 className="mb-3 font-display font-bold text-cloud">Crescimento de visualizações</h2>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={chartData} margin={{ left: -18, right: 8, top: 4 }}>
-            <defs>
-              <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={client.brand.primary} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={client.brand.primary} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2C2C34" vertical={false} />
-            <XAxis dataKey="week" stroke="#6B6B74" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis stroke="#6B6B74" fontSize={11} tickLine={false} axisLine={false} tickFormatter={compact} />
-            <Tooltip contentStyle={{ background: '#16161A', border: '1px solid #2C2C34', borderRadius: 12, fontSize: 12 }} formatter={(v: number) => [compact(v), 'Views']} />
-            <Area type="monotone" dataKey="views" stroke={client.brand.primary} strokeWidth={2.5} fill="url(#gv)" />
-          </AreaChart>
-        </ResponsiveContainer>
+
+      {/* Status Instagram */}
+      <Card className="flex flex-wrap items-center gap-3 p-4">
+        <Instagram className="h-4 w-4 shrink-0 text-pink-400" />
+        {conectado ? (
+          <>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-cloud">@{igData?.username}</p>
+              <p className="text-xs text-cloud-dim">
+                Atualizado: {igData?.ultimaSincEm ? new Date(igData.ultimaSincEm).toLocaleString('pt-BR') : '—'}
+              </p>
+            </div>
+            {role === 'ceo' && (
+              <button
+                onClick={sincronizar}
+                className="flex items-center gap-1.5 rounded-lg border border-ink-700 px-3 py-1.5 text-xs text-cloud-muted hover:border-ink-500 hover:text-cloud"
+              >
+                <RefreshCw className="h-3 w-3" /> Sincronizar
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-cloud">Instagram não conectado</p>
+              <p className="text-xs text-cloud-dim">Conecte para ver métricas reais de seguidores e alcance.</p>
+            </div>
+            {role === 'ceo' && (
+              <button
+                onClick={conectarInstagram}
+                disabled={connecting}
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Instagram className="h-3 w-3" />}
+                Conectar Instagram
+              </button>
+            )}
+          </>
+        )}
       </Card>
+
       <Card className="p-4 sm:p-5">
         <h2 className="mb-3 font-display font-bold text-cloud">Últimos posts</h2>
         <div className="space-y-2">

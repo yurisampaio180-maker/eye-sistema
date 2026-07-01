@@ -7,6 +7,7 @@ import {
   videosApi,
   agendaApi,
 } from '@/services/api';
+import { backend } from '@/services/backend';
 import type { PostStatus, VideoStage } from '@/types';
 
 export const useClients = () =>
@@ -47,6 +48,22 @@ export function useReschedulePost() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
   });
 }
+
+export const useInstagramMetricas = (clienteId: string) =>
+  useQuery({
+    queryKey: ['instagram', clienteId],
+    queryFn: () => backend.instagram.metricas(clienteId),
+    refetchInterval: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const useInstagramTodos = () =>
+  useQuery({
+    queryKey: ['instagram-todos'],
+    queryFn: () => backend.instagram.metricasTodos(),
+    refetchInterval: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+  });
 
 export function useUpdateVideoStage() {
   const qc = useQueryClient();
