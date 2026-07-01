@@ -577,13 +577,16 @@ function SlideCard({
     } catch (e: any) {
       // Mensagens de erro amigáveis por código
       const msg: string = e.message ?? 'Erro desconhecido.';
-      if (msg.includes('OPENAI_API_KEY') || msg.includes('não configurada')) {
-        setErro('Chave da OpenAI não configurada no servidor. Contate o administrador.');
-      } else if (e.status === 429) {
-        setErro('Limite de gerações atingido. Aguarde alguns minutos e tente novamente.');
-      } else if (msg.toLowerCase().includes('reject') || msg.toLowerCase().includes('violat')) {
-        setErro('O prompt foi rejeitado pela OpenAI. Tente reformular o contexto.');
-      } else if (e.status === 408 || msg.toLowerCase().includes('timeout')) {
+      const msgL = msg.toLowerCase();
+      if (msgL.includes('incorrect api key') || msgL.includes('invalid_api_key') || msgL.includes('401') || msgL.includes('authentication')) {
+        setErro('Chave da OpenAI inválida. Atualize OPENAI_API_KEY no Render e faça redeploy.');
+      } else if (msgL.includes('não configurada') || msgL.includes('openai_api_key')) {
+        setErro('Chave da OpenAI não configurada no servidor. Adicione OPENAI_API_KEY no Render.');
+      } else if (e.status === 429 || msgL.includes('rate limit') || msgL.includes('quota')) {
+        setErro('Limite de uso da OpenAI atingido. Verifique créditos em platform.openai.com ou aguarde.');
+      } else if (msgL.includes('reject') || msgL.includes('violat') || msgL.includes('safety')) {
+        setErro('O prompt foi rejeitado pelo filtro de conteúdo da OpenAI. Tente reformular.');
+      } else if (e.status === 408 || msgL.includes('timeout')) {
         setErro('A geração demorou muito. Tente novamente.');
       } else {
         setErro(`Erro ao gerar: ${msg}`);
