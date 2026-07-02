@@ -8,6 +8,12 @@ import { cn } from '@/lib/utils';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
 
+function resolveUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http')) return url; // URL absoluta (Supabase em produção)
+  return `${API_ORIGIN}${url}`; // path relativo (dev local)
+}
+
 function splitDataHora(iso: string) {
   const d = new Date(iso);
   const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -74,9 +80,10 @@ function CardRevisao({ item, onAtualizar }: { item: PostAgenda; onAtualizar: () 
       {/* Preview */}
       {item.imagemUrl ? (
         <img
-          src={`${API_ORIGIN}${item.imagemUrl}`}
+          src={resolveUrl(item.imagemUrl)!}
           alt={item.titulo}
           className="aspect-square w-full object-cover"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
         />
       ) : (
         <div className="flex aspect-square w-full items-center justify-center bg-ink-850 text-5xl">

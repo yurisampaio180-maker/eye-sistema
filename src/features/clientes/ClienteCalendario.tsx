@@ -6,6 +6,13 @@ import { useAuth } from '@/stores/auth';
 import { cn } from '@/lib/utils';
 import { monthMatrix, fmt, time, isSameDay, dayMonth } from '@/lib/dates';
 
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
+function resolveImgUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${API_ORIGIN}${url}`;
+}
+
 function statusKey(p: PostAgenda) {
   return p.atrasado && p.status !== 'postado' ? 'atrasado' : p.status;
 }
@@ -111,7 +118,7 @@ function PostModal({ post, role, onClose, onMudou }: { post: PostAgenda; role?: 
         <button onClick={onClose} className="text-cloud-dim hover:text-cloud"><X className="h-5 w-5" /></button>
       </div>
       <div className="space-y-3 p-4">
-        {post.imagemUrl && <img src={post.imagemUrl} alt="" className="max-h-60 w-full rounded-xl object-cover" />}
+        {post.imagemUrl && <img src={resolveImgUrl(post.imagemUrl)!} alt="" className="max-h-60 w-full rounded-xl object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
         <p className="flex items-center gap-2 text-sm text-cloud-muted"><Clock className="h-4 w-4" /> {fmt(post.dataHora, "dd 'de' MMM · HH:mm")} · {post.plataforma}</p>
         <div>
           <p className="eye-label mb-1">Legenda</p>

@@ -573,6 +573,12 @@ function ResultView({
 // ---------- Card de slide com prompt ----------
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
 
+function resolveUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('http')) return url; // Supabase (produção) — URL já absoluta
+  return `${API_ORIGIN}${url}`; // path relativo — dev local
+}
+
 const FORMATO_MAP: Record<string, string> = {
   feed: 'feed',
   stories: 'stories',
@@ -659,7 +665,7 @@ function SlideCard({
   function baixar() {
     if (!imagemUrl) return;
     const a = document.createElement('a');
-    a.href = `${API_ORIGIN}${imagemUrl}`;
+    a.href = resolveUrl(imagemUrl)!;
     a.download = `eye-slide-${slide.indice + 1}.webp`;
     document.body.appendChild(a);
     a.click();
@@ -669,7 +675,7 @@ function SlideCard({
   async function usarComoRef() {
     if (!imagemUrl) return;
     try {
-      const res = await fetch(`${API_ORIGIN}${imagemUrl}`);
+      const res = await fetch(resolveUrl(imagemUrl)!);
       const blob = await res.blob();
       const file = new File([blob], `referencia-gerada-${slide.indice + 1}.webp`, { type: 'image/webp' });
       const preview = URL.createObjectURL(file);
@@ -712,7 +718,7 @@ function SlideCard({
           {/* Preview */}
           <div className="relative min-h-[180px] flex-1 overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
             {imagemUrl ? (
-              <img src={`${API_ORIGIN}${imagemUrl}`} alt="Arte gerada" className="h-full w-full object-cover" />
+              <img src={resolveUrl(imagemUrl)!} alt="Arte gerada" className="h-full w-full object-cover" />
             ) : (
               <div className="grid h-full min-h-[180px] place-items-center">
                 <ImageIcon className="h-8 w-8 text-cloud-dim" />
