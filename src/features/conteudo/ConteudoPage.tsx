@@ -575,8 +575,8 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v
 
 function resolveUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith('http')) return url; // Supabase (produção) — URL já absoluta
-  return `${API_ORIGIN}${url}`; // path relativo — dev local
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  return `${API_ORIGIN}${url}`;
 }
 
 const FORMATO_MAP: Record<string, string> = {

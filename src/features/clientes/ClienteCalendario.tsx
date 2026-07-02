@@ -9,7 +9,7 @@ import { monthMatrix, fmt, time, isSameDay, dayMonth } from '@/lib/dates';
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
 function resolveImgUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
   return `${API_ORIGIN}${url}`;
 }
 

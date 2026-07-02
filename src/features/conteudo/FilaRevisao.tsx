@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Pencil, Trash2, CheckCheck } from 'lucide-react';
+import { CheckCircle2, Pencil, Trash2, CheckCheck, RefreshCw } from 'lucide-react';
 import { backend, type PostAgenda } from '@/services/backend';
 import { Card } from '@/components/ui';
 import { fmt } from '@/lib/dates';
@@ -10,8 +10,8 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v
 
 function resolveUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith('http')) return url; // URL absoluta (Supabase em produção)
-  return `${API_ORIGIN}${url}`; // path relativo (dev local)
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  return `${API_ORIGIN}${url}`;
 }
 
 function splitDataHora(iso: string) {
@@ -75,6 +75,11 @@ function CardRevisao({ item, onAtualizar }: { item: PostAgenda; onAtualizar: () 
 
   const isVideo = item.tipo === 'video';
 
+  const regenerar = useMutation({
+    mutationFn: () => backend.agenda.regenerarImagem(item.id),
+    onSuccess: invalidate,
+  });
+
   return (
     <Card className="overflow-hidden">
       {/* Preview */}
@@ -86,8 +91,18 @@ function CardRevisao({ item, onAtualizar }: { item: PostAgenda; onAtualizar: () 
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
         />
       ) : (
-        <div className="flex aspect-square w-full items-center justify-center bg-ink-850 text-5xl">
-          {isVideo ? '🎬' : '🖼️'}
+        <div className="flex aspect-square w-full flex-col items-center justify-center gap-3 bg-ink-850">
+          <span className="text-5xl">{isVideo ? '🎬' : '🎨'}</span>
+          {!isVideo && (
+            <button
+              onClick={() => regenerar.mutate()}
+              disabled={regenerar.isPending}
+              className="flex items-center gap-1.5 rounded-lg bg-eye-red/80 px-3 py-1.5 text-xs font-semibold text-white hover:bg-eye-red disabled:opacity-50"
+            >
+              <RefreshCw className={cn('h-3 w-3', regenerar.isPending && 'animate-spin')} />
+              {regenerar.isPending ? 'Gerando...' : 'Regenerar imagem'}
+            </button>
+          )}
         </div>
       )}
 

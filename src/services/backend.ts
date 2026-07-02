@@ -228,6 +228,7 @@ export const backend = {
     confirmar: (id: string) => api.post<PostAgenda>(`/agenda/${id}/confirmar`),
     devolver: (id: string, motivo: string) => api.post<PostAgenda>(`/agenda/${id}/devolver`, { motivo }),
     postar: (id: string) => api.post<PostAgenda>(`/agenda/${id}/postar`),
+    regenerarImagem: (id: string) => api.post<PostAgenda>(`/agenda/${id}/regenerar-imagem`),
   },
   ia: {
     gerarImagem: (form: FormData) =>
