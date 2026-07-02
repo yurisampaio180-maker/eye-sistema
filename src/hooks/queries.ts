@@ -92,6 +92,14 @@ export const useMotorStatus = (geracaoId: string | null) =>
     },
   });
 
+export const useAgendaPendentes = (clienteId?: string) =>
+  useQuery({
+    queryKey: ['agenda-pendentes', clienteId ?? 'all'],
+    queryFn: () => backend.agenda.pendentes(clienteId),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+
 export function useUpdateVideoStage() {
   const qc = useQueryClient();
   return useMutation({

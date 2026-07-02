@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Sparkles,
   Wand2,
+  Bot,
   Copy,
   Check,
   Image as ImageIcon,
@@ -18,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { useClients } from '@/hooks/queries';
+import { useAuth } from '@/stores/auth';
 import { clientById } from '@/data/clients';
 import { Card, PageHeader, Button, Badge } from '@/components/ui';
 import { NovoPostModal } from '@/features/clientes/ClienteCalendario';
@@ -27,6 +29,7 @@ import { backend } from '@/services/backend';
 import { dnaByClient } from './data/clientesDNA';
 import { frameworks, frameworkList } from './data/frameworks';
 import { generate, toClipboardText, formatLabel } from './engine';
+import { GerarMes } from './GerarMes';
 import type {
   ContentFormat,
   ContentObjective,
@@ -45,9 +48,13 @@ const objetivos: { id: ContentObjective; label: string }[] = [
 ];
 
 type Tab = 'motor' | 'roteiro';
+type Modo = 'mes' | 'criar';
 
 export function ConteudoPage() {
+  const { user } = useAuth();
   const { data: clients } = useClients();
+  const isCeo = user?.role === 'ceo';
+  const [modo, setModo] = useState<Modo>(isCeo ? 'mes' : 'criar');
   const [tab, setTab] = useState<Tab>('motor');
   const [clienteId, setClienteId] = useState('verso-nosso');
   const dna = dnaByClient(clienteId);
@@ -56,47 +63,83 @@ export function ConteudoPage() {
     <div>
       <PageHeader
         icon={Sparkles}
-        title="Motor de Criação · IA"
-        subtitle="DNA do cliente + framework de copy → prompt gerado com gpt-image-1"
+        title="Conteúdo"
+        subtitle={
+          modo === 'mes'
+            ? 'Motor autônomo — geração mensal com IA'
+            : 'DNA do cliente + framework de copy → prompt gerado com gpt-image-1'
+        }
       />
 
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <select
-          className="eye-input w-auto"
-          value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
+      {/* Tabs externas: Gerar o Mês | Criar Agora */}
+      <div className="mb-5 flex rounded-xl border border-ink-700 p-0.5 w-fit">
+        {isCeo && (
+          <button
+            onClick={() => setModo('mes')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+              modo === 'mes' ? 'bg-eye-red text-white' : 'text-cloud-muted hover:text-cloud',
+            )}
+          >
+            <Bot className="h-3.5 w-3.5" /> Gerar o Mês
+          </button>
+        )}
+        <button
+          onClick={() => setModo('criar')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+            modo === 'criar' ? 'bg-eye-red text-white' : 'text-cloud-muted hover:text-cloud',
+          )}
         >
-          {clients?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-          <option value="eye-agencia">EYE Agência (própria)</option>
-        </select>
-
-        <div className="ml-auto flex rounded-xl border border-ink-700 p-0.5">
-          {(
-            [
-              ['motor', Wand2, 'Motor de Criação'],
-              ['roteiro', Clapperboard, 'Roteiro de vídeo'],
-            ] as [Tab, typeof Wand2, string][]
-          ).map(([t, Icon, label]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-                tab === t ? 'bg-eye-red text-white' : 'text-cloud-muted'
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" /> {label}
-            </button>
-          ))}
-        </div>
+          <Wand2 className="h-3.5 w-3.5" /> Criar Agora
+        </button>
       </div>
 
-      {dna && tab === 'motor' && <Motor key={clienteId} clienteId={clienteId} />}
-      {dna && tab === 'roteiro' && <Roteiro key={clienteId} clienteId={clienteId} />}
+      {/* Gerar o Mês — Motor de Marketing */}
+      {modo === 'mes' && <GerarMes />}
+
+      {/* Criar Agora — criador individual */}
+      {modo === 'criar' && (
+        <>
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <select
+              className="eye-input w-auto"
+              value={clienteId}
+              onChange={(e) => setClienteId(e.target.value)}
+            >
+              {clients?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+              <option value="eye-agencia">EYE Agência (própria)</option>
+            </select>
+
+            <div className="ml-auto flex rounded-xl border border-ink-700 p-0.5">
+              {(
+                [
+                  ['motor', Wand2, 'Motor de Criação'],
+                  ['roteiro', Clapperboard, 'Roteiro de vídeo'],
+                ] as [Tab, typeof Wand2, string][]
+              ).map(([t, Icon, label]) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                    tab === t ? 'bg-eye-red text-white' : 'text-cloud-muted',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" /> {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {dna && tab === 'motor' && <Motor key={clienteId} clienteId={clienteId} />}
+          {dna && tab === 'roteiro' && <Roteiro key={clienteId} clienteId={clienteId} />}
+        </>
+      )}
     </div>
   );
 }

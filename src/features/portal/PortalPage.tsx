@@ -209,6 +209,9 @@ function NovaSolicitacaoForm({ clienteId, unidadeFixa, onCriada }: { clienteId: 
   async function enviar() {
     setErro('');
     if (!form.titulo.trim()) return setErro('Informe um título.');
+    if (tipo === 'video' && (!form.dataEvento || !form.horaEvento)) {
+      return setErro('Para vídeos, informe a data e o horário do evento/gravação.');
+    }
     setEnviando(true);
     try {
       const payload: NovaSolicitacao = { ...form, tipo, enviarAgora: true, unidadeId: unidadeId || undefined };
@@ -313,18 +316,31 @@ function NovaSolicitacaoForm({ clienteId, unidadeFixa, onCriada }: { clienteId: 
               Precisa de roteiro
             </label>
 
-            {form.tipoVideo === 'cobertura' && (
-              <>
-                <div className="md:col-span-2 mt-1 rounded-xl border border-ink-700/60 bg-ink-900/40 p-3">
-                  <p className="eye-label mb-2">Cobertura de evento</p>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Data do evento">
-                      <input type="date" className="eye-input" onChange={(e) => up({ dataEvento: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
-                    </Field>
-                    <Field label="Hora do evento">
-                      <input type="time" className="eye-input" value={form.horaEvento ?? ''} onChange={(e) => up({ horaEvento: e.target.value })} />
-                    </Field>
-                  </div>
+            <div className="md:col-span-2 mt-1 rounded-xl border border-ink-700/60 bg-ink-900/40 p-3">
+              <p className="eye-label mb-2">Data e horário <span className="text-eye-red">*</span></p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="Data do evento/gravação">
+                  <input
+                    type="date"
+                    className="eye-input"
+                    value={form.dataEvento ? new Date(form.dataEvento).toLocaleDateString('en-CA') : ''}
+                    onChange={(e) => up({ dataEvento: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                    required
+                  />
+                </Field>
+                <Field label="Horário">
+                  <input
+                    type="time"
+                    className="eye-input"
+                    value={form.horaEvento ?? ''}
+                    onChange={(e) => up({ horaEvento: e.target.value })}
+                    required
+                  />
+                </Field>
+              </div>
+
+              {form.tipoVideo === 'cobertura' && (
+                <>
                   <p className="eye-label mb-1.5 mt-3">O que cobrir</p>
                   <div className="flex flex-wrap gap-3">
                     {([['coberturaReels', 'Reels'], ['coberturaFotos', 'Fotos'], ['coberturaStories', 'Stories']] as const).map(([k, lbl]) => (
@@ -343,9 +359,9 @@ function NovaSolicitacaoForm({ clienteId, unidadeFixa, onCriada }: { clienteId: 
                       </select>
                     </Field>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </>
         )}
 

@@ -156,6 +156,10 @@ export interface PostAgenda {
   localEvento: string | null;
   atrasado: boolean;
   geradoPorIA?: number;
+  roteiro?: string | null;
+  justificativa?: string | null;
+  formato?: string | null;
+  objetivo?: string | null;
 }
 
 export interface NovoPost {
@@ -217,9 +221,10 @@ export const backend = {
   },
   agenda: {
     list: (clienteId?: string) => api.get<PostAgenda[]>(`/agenda${clienteId ? `?clienteId=${clienteId}` : ''}`),
-    pendentes: () => api.get<PostAgenda[]>('/agenda/pendentes'),
+    pendentes: (clienteId?: string) => api.get<PostAgenda[]>(`/agenda/pendentes${clienteId ? `?clienteId=${clienteId}` : ''}`),
     criar: (body: NovoPost) => api.post<PostAgenda>('/agenda', body),
-    editar: (id: string, body: Partial<NovoPost>) => api.patch<PostAgenda>(`/agenda/${id}`, body),
+    editar: (id: string, body: Partial<NovoPost & { titulo: string; legenda: string; hashtags: string }>) => api.patch<PostAgenda>(`/agenda/${id}`, body),
+    excluir: (id: string) => api.delete(`/agenda/${id}`),
     confirmar: (id: string) => api.post<PostAgenda>(`/agenda/${id}/confirmar`),
     devolver: (id: string, motivo: string) => api.post<PostAgenda>(`/agenda/${id}/devolver`, { motivo }),
     postar: (id: string) => api.post<PostAgenda>(`/agenda/${id}/postar`),

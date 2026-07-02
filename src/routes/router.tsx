@@ -20,7 +20,6 @@ import { VideosPage } from '@/features/videos/VideosPage';
 import { EquipePage } from '@/features/equipe/EquipePage';
 import { AgendaPage } from '@/features/agenda/AgendaPage';
 import { NotificacoesPage } from '@/features/notificacoes/NotificacoesPage';
-import { PainelMotor } from '@/features/motor/PainelMotor';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -106,7 +105,6 @@ export const router = createBrowserRouter([
       { path: 'equipe', element: <ProtectedRoute roles={['ceo']}><EquipePage /></ProtectedRoute> },
       { path: 'agenda', element: <ProtectedRoute roles={['ceo']}><AgendaPage /></ProtectedRoute> },
       { path: 'notificacoes', element: <ProtectedRoute roles={['ceo', 'social']}><NotificacoesPage /></ProtectedRoute> },
-      { path: 'motor', element: <ProtectedRoute roles={['ceo']}><PainelMotor /></ProtectedRoute> },
     ],
   },
 ]);
