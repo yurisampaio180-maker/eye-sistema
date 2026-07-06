@@ -77,6 +77,7 @@ export interface Solicitacao {
 export interface NovaSolicitacao {
   tipo: SolicTipo;
   titulo: string;
+  clienteId?: string;
   descricao?: string;
   prioridade?: Prioridade;
   prazoDesejado?: string;
@@ -199,6 +200,9 @@ export const backend = {
       api.get<Solicitacao[]>(`/solicitacoes${status ? `?status=${status}` : ''}`),
     get: (id: string) => api.get<Solicitacao>(`/solicitacoes/${id}`),
     create: (body: NovaSolicitacao) => api.post<Solicitacao>('/solicitacoes', body),
+    update: (id: string, body: Partial<NovaSolicitacao>) => api.patch<Solicitacao>(`/solicitacoes/${id}`, body),
+    delete: (id: string) => api.delete<Solicitacao>(`/solicitacoes/${id}`),
+    lembreteWhatsApp: (id: string) => api.post<{ enviado: boolean }>(`/solicitacoes/${id}/lembrete-whatsapp`),
     enviar: (id: string) => api.post<Solicitacao>(`/solicitacoes/${id}/enviar`),
     reenviar: (id: string) => api.post<Solicitacao>(`/solicitacoes/${id}/reenviar`),
     cancelar: (id: string) => api.post<Solicitacao>(`/solicitacoes/${id}/cancelar`),
