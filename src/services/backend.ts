@@ -126,6 +126,15 @@ export interface Membro {
   avatarColor: string;
 }
 
+export interface ClienteAsset {
+  id: string;
+  clienteId: string;
+  tipo: 'logo' | 'referencia';
+  url: string;
+  nome: string | null;
+  createdAt: string;
+}
+
 export type PostStatus = 'rascunho' | 'aguardando_confirmacao' | 'confirmado' | 'postado' | 'agendado';
 
 export interface TransicaoSLA {
@@ -260,6 +269,11 @@ export const backend = {
       api.post<InstagramStatus>(`/instagram/sincronizar/${clienteId}`),
   },
   equipe: () => api.get<Membro[]>('/equipe'),
+  assets: {
+    list: (clienteId: string) => api.get<ClienteAsset[]>(`/clientes/${clienteId}/assets`),
+    upload: (clienteId: string, form: FormData) => api.upload<ClienteAsset>(`/clientes/${clienteId}/assets`, form),
+    remover: (clienteId: string, assetId: string) => api.delete(`/clientes/${clienteId}/assets/${assetId}`),
+  },
   clientes: () => api.get<{ id: string; nome: string; corPrimaria: string }[]>('/clientes'),
   unidades: (clienteId: string) => api.get<Unidade[]>(`/clientes/${clienteId}/unidades`),
   stats: () => api.get<Stats>('/stats'),

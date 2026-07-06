@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Palette, Megaphone, Calendar, Sparkles, MessageSquareQuote,
   LayoutDashboard, Clapperboard, Inbox, Settings, Clock, Loader2,
-  Instagram, RefreshCw, AlertCircle,
+  Instagram, RefreshCw, AlertCircle, Upload, Trash2, Image as ImageIcon,
 } from 'lucide-react';
 import { useClient, usePosts, useCampaigns, useVideos, useInstagramMetricas } from '@/hooks/queries';
 import { Card, Badge, Skeleton } from '@/components/ui';
@@ -17,7 +17,7 @@ import { ClienteCalendario } from './ClienteCalendario';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { dnaByClient } from '@/features/conteudo/data/clientesDNA';
 import { frameworks } from '@/features/conteudo/data/frameworks';
-import { backend, solicStatusInfo, type Solicitacao } from '@/services/backend';
+import { backend, solicStatusInfo, type Solicitacao, type ClienteAsset } from '@/services/backend';
 import type { InstagramStatus } from '@/services/backend';
 
 type AbaId = 'visao' | 'calendario' | 'ia' | 'videos' | 'solicitacoes' | 'trafego' | 'config';
@@ -384,40 +384,139 @@ function TrafegoCliente({ id, primary }: { id: string; primary: string }) {
   );
 }
 
-// ---------- Configurações (DNA) ----------
+// ---------- Configurações (DNA + Assets) ----------
 function ConfiguracoesCliente({ id, client }: { id: string; client: any }) {
   const dna = dnaByClient(id);
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2"><Palette className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">Identidade visual</h2></div>
-        <p className="eye-label mb-1.5">Paleta</p>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {(dna?.paleta?.length ? dna.paleta : [{ nome: 'Primária', hex: client.brand.primary }, { nome: 'Secundária', hex: client.brand.secondary }]).map((p) => (
-            <span key={p.hex} className="flex items-center gap-2 rounded-lg border border-ink-700 bg-ink-900 px-2 py-1.5"><span className="h-5 w-5 rounded" style={{ backgroundColor: p.hex }} /><span className="font-mono text-xs text-cloud-muted">{p.hex}</span></span>
-          ))}
-        </div>
-        <Campo label="Tipografia" valor={dna ? `${dna.tipografia.display} / ${dna.tipografia.corpo}` : client.brand.fonts} />
-        <Campo label="Serviços contratados" valor={(client.services ?? []).join(', ')} />
-      </Card>
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2"><MessageSquareQuote className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">DNA criativo</h2></div>
-        {dna ? (
-          <>
-            <Campo label="Tom de voz" valor={dna.tomDeVoz} />
-            <Campo label="Referências" valor={dna.referenciasVisuais.join(' · ')} />
-            {dna.fraseCentral && <Campo label="Frase central" valor={`“${dna.fraseCentral}”`} />}
-            <p className="eye-label mb-1 mt-3">Frameworks preferidos</p>
-            <div className="flex flex-wrap gap-1.5">{dna.frameworksCopyPreferidos.map((f) => <Badge key={f} className="bg-eye-red/15 text-eye-red">{frameworks[f].nome}</Badge>)}</div>
-            {dna.proibicoes.length > 0 && (
-              <div className="mt-3"><p className="eye-label mb-1">Proibições</p><ul className="space-y-0.5 text-xs text-cloud-muted">{dna.proibicoes.slice(0, 4).map((p, i) => <li key={i}>• {p}</li>)}</ul></div>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-cloud-dim">DNA não configurado para este cliente.</p>
-        )}
-      </Card>
+    <div className="space-y-5">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="mb-3 flex items-center gap-2"><Palette className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">Identidade visual</h2></div>
+          <p className="eye-label mb-1.5">Paleta</p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(dna?.paleta?.length ? dna.paleta : [{ nome: 'Primária', hex: client.brand.primary }, { nome: 'Secundária', hex: client.brand.secondary }]).map((p) => (
+              <span key={p.hex} className="flex items-center gap-2 rounded-lg border border-ink-700 bg-ink-900 px-2 py-1.5"><span className="h-5 w-5 rounded" style={{ backgroundColor: p.hex }} /><span className="font-mono text-xs text-cloud-muted">{p.hex}</span></span>
+            ))}
+          </div>
+          <Campo label="Tipografia" valor={dna ? `${dna.tipografia.display} / ${dna.tipografia.corpo}` : client.brand.fonts} />
+          <Campo label="Serviços contratados" valor={(client.services ?? []).join(', ')} />
+        </Card>
+        <Card className="p-5">
+          <div className="mb-3 flex items-center gap-2"><MessageSquareQuote className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">DNA criativo</h2></div>
+          {dna ? (
+            <>
+              <Campo label="Tom de voz" valor={dna.tomDeVoz} />
+              <Campo label="Referências" valor={dna.referenciasVisuais.join(' · ')} />
+              {dna.fraseCentral && <Campo label="Frase central" valor={`"${dna.fraseCentral}"`} />}
+              <p className="eye-label mb-1 mt-3">Frameworks preferidos</p>
+              <div className="flex flex-wrap gap-1.5">{dna.frameworksCopyPreferidos.map((f) => <Badge key={f} className="bg-eye-red/15 text-eye-red">{frameworks[f].nome}</Badge>)}</div>
+              {dna.proibicoes.length > 0 && (
+                <div className="mt-3"><p className="eye-label mb-1">Proibições</p><ul className="space-y-0.5 text-xs text-cloud-muted">{dna.proibicoes.slice(0, 4).map((p, i) => <li key={i}>• {p}</li>)}</ul></div>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-cloud-dim">DNA não configurado para este cliente.</p>
+          )}
+        </Card>
+      </div>
+      <AssetsCliente clienteId={id} />
     </div>
+  );
+}
+
+// ---------- Assets (logos + referências para a IA) ----------
+function AssetsCliente({ clienteId }: { clienteId: string }) {
+  const [assets, setAssets] = useState<ClienteAsset[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState('');
+
+  async function carregar() {
+    try { setAssets(await backend.assets.list(clienteId)); } catch { setAssets([]); }
+  }
+  useEffect(() => { carregar(); }, [clienteId]);
+
+  async function upload(tipo: 'logo' | 'referencia', file: File) {
+    setErro(''); setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('tipo', tipo);
+      fd.append('arquivo', file);
+      fd.append('nome', file.name);
+      await backend.assets.upload(clienteId, fd);
+      await carregar();
+    } catch (e: any) {
+      setErro(e?.message ?? 'Erro ao fazer upload.');
+    } finally { setBusy(false); }
+  }
+
+  async function remover(assetId: string) {
+    setBusy(true);
+    try { await backend.assets.remover(clienteId, assetId); await carregar(); }
+    finally { setBusy(false); }
+  }
+
+  const logos = assets.filter((a) => a.tipo === 'logo');
+  const refs  = assets.filter((a) => a.tipo === 'referencia');
+
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">Assets para geração de imagem</h2></div>
+      {erro && <p className="mb-3 rounded-lg border border-eye-red/30 bg-eye-red/5 p-2 text-xs text-eye-red">{erro}</p>}
+
+      {/* Logos */}
+      <div className="mb-5">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="eye-label">Logomarcas oficiais <span className="text-cloud-dim">(PNG com fundo transparente)</span></p>
+          <label className={cn('eye-btn eye-btn-ghost cursor-pointer py-1 text-xs', busy && 'pointer-events-none opacity-50')}>
+            <Upload className="h-3.5 w-3.5" /> Adicionar logo
+            <input type="file" accept="image/png" className="hidden" onChange={(e) => e.target.files?.[0] && upload('logo', e.target.files[0])} />
+          </label>
+        </div>
+        {logos.length === 0 ? (
+          <p className="text-xs text-cloud-dim">Nenhuma logo cadastrada. A IA usará descrição textual.</p>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {logos.map((a) => (
+              <div key={a.id} className="group relative rounded-xl border border-ink-700 bg-ink-900 p-1">
+                <img src={a.url} alt={a.nome ?? 'logo'} className="h-16 w-16 rounded-lg object-contain" />
+                <button onClick={() => remover(a.id)} disabled={busy} className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-eye-red text-white group-hover:flex">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+                <p className="mt-1 max-w-[64px] truncate text-center text-[9px] text-cloud-dim">{a.nome}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-1 text-[10px] text-amber-400/80">⚠️ A logo será inserida EXATAMENTE como enviada — sem redesenho.</p>
+      </div>
+
+      {/* Referências */}
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="eye-label">Artes de referência <span className="text-cloud-dim">(exemplos aprovados de estilo)</span></p>
+          <label className={cn('eye-btn eye-btn-ghost cursor-pointer py-1 text-xs', busy && 'pointer-events-none opacity-50')}>
+            <Upload className="h-3.5 w-3.5" /> Adicionar referência
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && upload('referencia', e.target.files[0])} />
+          </label>
+        </div>
+        {refs.length === 0 ? (
+          <p className="text-xs text-cloud-dim">Nenhuma referência. Envie artes aprovadas para que a IA imite o estilo.</p>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {refs.map((a) => (
+              <div key={a.id} className="group relative rounded-xl border border-ink-700 bg-ink-900 p-1">
+                <img src={a.url} alt={a.nome ?? 'ref'} className="h-16 w-16 rounded-lg object-cover" />
+                <button onClick={() => remover(a.id)} disabled={busy} className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-eye-red text-white group-hover:flex">
+                  <Trash2 className="h-3 w-3" />
+                </button>
+                <p className="mt-1 max-w-[64px] truncate text-center text-[9px] text-cloud-dim">{a.nome}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-1 text-[10px] text-cloud-dim">💡 Até 3 referências são enviadas a cada geração de arte.</p>
+      </div>
+    </Card>
   );
 }
 
