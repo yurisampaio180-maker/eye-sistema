@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Loader2, Check, X, Clock, Send, CalendarPlus } from 'lucide-react';
+import { Plus, Loader2, Check, X, Clock, Send, CalendarPlus, Pencil, MapPin } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui';
-import { backend, safePostStatus, postStatusInfo, type PostAgenda } from '@/services/backend';
+import { backend, safePostStatus, postStatusInfo, type PostAgenda, type Membro } from '@/services/backend';
 import { useAuth } from '@/stores/auth';
 import { cn } from '@/lib/utils';
 import { monthMatrix, fmt, time, isSameDay, dayMonth } from '@/lib/dates';
@@ -105,21 +105,81 @@ export function ClienteCalendario({ clienteId, primary }: { clienteId: string; p
 }
 
 // ---------- Modal de detalhe / confirmação ----------
+function toLocalInput(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function PostModal({ post, role, onClose, onMudou }: { post: PostAgenda; role?: string; onClose: () => void; onMudou: () => void }) {
   const [busy, setBusy] = useState(false);
   const [legenda, setLegenda] = useState(post.legenda);
+  const [editando, setEditando] = useState(false);
+  const [dataHora, setDataHora] = useState(toLocalInput(post.dataHora));
+  const [localEvento, setLocalEvento] = useState(post.localEvento ?? '');
+  const [responsavelId, setResponsavelId] = useState(post.responsavelId ?? '');
+  const [equipe, setEquipe] = useState<Membro[]>([]);
   const st = statusKey(post);
+
+  useEffect(() => {
+    if (editando && equipe.length === 0) {
+      backend.equipe().then(setEquipe).catch(() => {});
+    }
+  }, [editando]);
+
   async function acao(fn: () => Promise<unknown>) { setBusy(true); try { await fn(); onMudou(); } finally { setBusy(false); } }
+
+  async function salvarEdicao() {
+    const isoDataHora = new Date(dataHora).toISOString();
+    await acao(() => backend.agenda.editar(post.id, {
+      dataHora: isoDataHora,
+      responsavelId: responsavelId || null,
+      localEvento: localEvento || null,
+    }));
+  }
 
   return (
     <Overlay onClose={onClose}>
       <div className="flex items-center justify-between border-b border-ink-700/60 p-4">
         <div className="flex items-center gap-2"><h3 className="font-display text-lg font-bold text-cloud">{post.titulo}</h3><Badge className={st.badge} dot={st.dot}>{st.label}</Badge></div>
-        <button onClick={onClose} className="text-cloud-dim hover:text-cloud"><X className="h-5 w-5" /></button>
+        <div className="flex items-center gap-2">
+          {role === 'ceo' && post.status !== 'postado' && (
+            <button onClick={() => setEditando((v) => !v)} className={cn('text-cloud-dim hover:text-cloud', editando && 'text-eye-red')}><Pencil className="h-4 w-4" /></button>
+          )}
+          <button onClick={onClose} className="text-cloud-dim hover:text-cloud"><X className="h-5 w-5" /></button>
+        </div>
       </div>
       <div className="space-y-3 p-4">
         {post.imagemUrl && <img src={resolveImgUrl(post.imagemUrl)!} alt="" className="max-h-60 w-full rounded-xl object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
-        <p className="flex items-center gap-2 text-sm text-cloud-muted"><Clock className="h-4 w-4" /> {fmt(post.dataHora, "dd 'de' MMM · HH:mm")} · {post.plataforma}</p>
+
+        {editando ? (
+          <div className="space-y-3 rounded-xl border border-eye-red/20 bg-eye-red/5 p-3">
+            <p className="eye-label text-eye-red">Editar evento</p>
+            <div>
+              <p className="eye-label mb-1">Data e hora</p>
+              <input type="datetime-local" className="eye-input" value={dataHora} onChange={(e) => setDataHora(e.target.value)} />
+            </div>
+            <div>
+              <p className="eye-label mb-1">Responsavel</p>
+              <select className="eye-input" value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)}>
+                <option value="">— sem responsavel —</option>
+                {equipe.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <p className="eye-label mb-1"><MapPin className="mr-1 inline h-3 w-3" />Local</p>
+              <input type="text" className="eye-input" placeholder="Ex: Prefeitura Municipal, Av. Principal..." value={localEvento} onChange={(e) => setLocalEvento(e.target.value)} />
+            </div>
+            <Button onClick={salvarEdicao} disabled={busy} className="w-full"><Check className="h-4 w-4" /> Salvar alteracoes</Button>
+          </div>
+        ) : (
+          <>
+            <p className="flex items-center gap-2 text-sm text-cloud-muted"><Clock className="h-4 w-4" /> {fmt(post.dataHora, "dd 'de' MMM · HH:mm")} · {post.plataforma}</p>
+            {post.localEvento && <p className="flex items-center gap-1.5 text-xs text-cloud-dim"><MapPin className="h-3.5 w-3.5" /> {post.localEvento}</p>}
+            {post.responsavelNome && <p className="text-xs text-cloud-dim">Responsavel: {post.responsavelNome}</p>}
+          </>
+        )}
+
         <div>
           <p className="eye-label mb-1">Legenda</p>
           <textarea className="eye-input h-28 resize-none" value={legenda} onChange={(e) => setLegenda(e.target.value)} />
@@ -127,18 +187,18 @@ function PostModal({ post, role, onClose, onMudou }: { post: PostAgenda; role?: 
         </div>
         <p className="text-xs text-cloud-dim">Criado por {post.criadoPorNome ?? '—'}{post.postarPorNome ? ` · postado por ${post.postarPorNome}` : ''}</p>
 
-        {/* Ações conforme papel e status */}
+        {/* Acoes conforme papel e status */}
         <div className="flex flex-wrap gap-2 border-t border-ink-700/60 pt-3">
           {role === 'ceo' && post.status === 'aguardando_confirmacao' && (
             <>
               <Button onClick={() => acao(() => backend.agenda.confirmar(post.id))} disabled={busy}><Check className="h-4 w-4" /> Confirmar</Button>
-              <Button variant="ghost" onClick={() => acao(() => backend.agenda.devolver(post.id, 'Ajuste necessário'))} disabled={busy}>Devolver</Button>
+              <Button variant="ghost" onClick={() => acao(() => backend.agenda.devolver(post.id, 'Ajuste necessario'))} disabled={busy}>Devolver</Button>
             </>
           )}
           {(role === 'ceo' || role === 'social') && post.status === 'confirmado' && (
             <Button variant="primary" className="bg-sky-600 hover:bg-sky-700" onClick={() => acao(() => backend.agenda.postar(post.id))} disabled={busy}><Send className="h-4 w-4" /> Marcar como postado</Button>
           )}
-          {post.status === 'aguardando_confirmacao' && role !== 'ceo' && <p className="text-xs text-amber-400">Aguardando confirmação do CEO.</p>}
+          {post.status === 'aguardando_confirmacao' && role !== 'ceo' && <p className="text-xs text-amber-400">Aguardando confirmacao do CEO.</p>}
         </div>
       </div>
     </Overlay>

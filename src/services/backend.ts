@@ -247,7 +247,7 @@ export const backend = {
     list: (clienteId?: string) => api.get<PostAgenda[]>(`/agenda${clienteId ? `?clienteId=${clienteId}` : ''}`),
     pendentes: (clienteId?: string) => api.get<PostAgenda[]>(`/agenda/pendentes${clienteId ? `?clienteId=${clienteId}` : ''}`),
     criar: (body: NovoPost) => api.post<PostAgenda>('/agenda', body),
-    editar: (id: string, body: Partial<NovoPost & { titulo: string; legenda: string; hashtags: string }>) => api.patch<PostAgenda>(`/agenda/${id}`, body),
+    editar: (id: string, body: Partial<NovoPost & { titulo: string; legenda: string; hashtags: string; responsavelId: string | null; localEvento: string | null }>) => api.patch<PostAgenda>(`/agenda/${id}`, body),
     excluir: (id: string) => api.delete(`/agenda/${id}`),
     confirmar: (id: string) => api.post<PostAgenda>(`/agenda/${id}/confirmar`),
     devolver: (id: string, motivo: string) => api.post<PostAgenda>(`/agenda/${id}/devolver`, { motivo }),
