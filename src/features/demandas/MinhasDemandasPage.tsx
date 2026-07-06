@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Inbox, Loader2, Play, Upload, FileText, Clock, Building2, Paperclip,
-  Image as ImageIcon, Video, ChevronDown, Check, Sparkles, MapPin, CalendarDays,
+  Image as ImageIcon, Video, ChevronDown, Check, Sparkles, MapPin, CalendarDays, Link2,
 } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, EmptyState } from '@/components/ui';
 import { backend, type Tarefa, type Solicitacao, type PostAgenda } from '@/services/backend';
@@ -111,6 +111,7 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
   const [aberto, setAberto] = useState(false);
   const [solic, setSolic] = useState<Solicitacao | null>(null);
   const [busy, setBusy] = useState(false);
+  const [videoLinkInput, setVideoLinkInput] = useState('');
   const pl = prodLabel[tarefa.statusProducao] ?? { label: tarefa.statusProducao, badge: 'bg-ink-700 text-cloud-muted' };
 
   useEffect(() => {
@@ -121,6 +122,12 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
   async function entregar(file: File) {
     const fd = new FormData(); fd.append('file', file);
     await acao(() => backend.tarefas.entrega(tarefa.id, fd));
+  }
+  async function entregarLink() {
+    const link = videoLinkInput.trim();
+    if (!link) return;
+    await acao(() => backend.tarefas.entregaLink(tarefa.id, link));
+    setVideoLinkInput('');
   }
 
   const podeIniciar = ['ideia', 'roteiro'].includes(tarefa.statusProducao);
@@ -205,9 +212,15 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
               )}
 
               {/* entrega já feita */}
-              {tarefa.entregaUrl && (
-                <a href={`${API_ORIGIN}${tarefa.entregaUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400"><Check className="h-4 w-4" /> Entrega enviada</a>
-              )}
+              {isVideo && tarefa.videoLink ? (
+                <a href={tarefa.videoLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400">
+                  <Check className="h-4 w-4" /> Vídeo entregue <Link2 className="h-3 w-3" /> ver link
+                </a>
+              ) : !isVideo && tarefa.entregaUrl ? (
+                <a href={`${API_ORIGIN}${tarefa.entregaUrl}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-400">
+                  <Check className="h-4 w-4" /> Entrega enviada
+                </a>
+              ) : null}
 
               {/* ações */}
               <div className="flex flex-wrap gap-2 border-t border-ink-700/60 pt-3">
@@ -222,10 +235,27 @@ function DemandaCard({ tarefa, isVideo, onMudou }: { tarefa: Tarefa; isVideo: bo
                   </Button>
                 )}
                 {tarefa.statusProducao !== 'pronto' && (
-                  <label className={cn('eye-btn eye-btn-ghost cursor-pointer py-1.5', busy && 'pointer-events-none opacity-50')}>
-                    <Upload className="h-4 w-4" /> {isVideo ? 'Upload do vídeo' : 'Entregar arte'}
-                    <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && entregar(e.target.files[0])} />
-                  </label>
+                  isVideo ? (
+                    <div className="flex w-full items-center gap-2">
+                      <input
+                        type="url"
+                        placeholder="Cole o link do Google Drive ou WeTransfer..."
+                        className="min-w-0 flex-1 rounded-xl border border-ink-600 bg-ink-800 px-3 py-1.5 text-xs text-cloud placeholder:text-cloud-dim focus:border-eye-red/50 focus:outline-none disabled:opacity-50"
+                        value={videoLinkInput}
+                        onChange={(e) => setVideoLinkInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && entregarLink()}
+                        disabled={busy}
+                      />
+                      <Button variant="ghost" className="shrink-0 py-1.5" disabled={busy || !videoLinkInput.trim()} onClick={entregarLink}>
+                        <Upload className="h-4 w-4" /> Entregar
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className={cn('eye-btn eye-btn-ghost cursor-pointer py-1.5', busy && 'pointer-events-none opacity-50')}>
+                      <Upload className="h-4 w-4" /> Entregar arte
+                      <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && entregar(e.target.files[0])} />
+                    </label>
+                  )
                 )}
               </div>
             </div>

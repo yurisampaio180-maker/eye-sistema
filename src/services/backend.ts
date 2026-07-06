@@ -111,6 +111,8 @@ export interface Tarefa {
   clienteNome: string | null;
   solicitacaoStatus: string;
   entregaUrl: string | null;
+  videoLink: string | null;
+  videoLinkTipo: string | null;
   promptSugerido: string | null;
   legendaSugerida: string | null;
   createdAt: string;
@@ -222,6 +224,8 @@ export const backend = {
     atribuir: (id: string, responsavelId: string) =>
       api.patch<Tarefa>(`/tarefas/${id}`, { responsavelId }),
     entrega: (id: string, form: FormData) => api.upload<Tarefa>(`/tarefas/${id}/entrega`, form),
+    entregaLink: (id: string, videoLink: string) =>
+      api.post<Tarefa>(`/tarefas/${id}/entrega-link`, { videoLink }),
   },
   agenda: {
     list: (clienteId?: string) => api.get<PostAgenda[]>(`/agenda${clienteId ? `?clienteId=${clienteId}` : ''}`),
