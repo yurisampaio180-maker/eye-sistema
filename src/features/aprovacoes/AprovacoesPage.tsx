@@ -46,7 +46,7 @@ export function AprovacoesPage() {
       pend.sort((a, b) => prioridadePeso[a.prioridade] - prioridadePeso[b.prioridade]);
       setAprovar(pend);
       setConfirmar(prontas);
-      setEquipe(membros.filter((m) => m.role !== 'ceo'));
+      setEquipe(membros);
     } finally {
       setLoading(false);
     }
@@ -165,7 +165,7 @@ function AprovacaoCard({ solic, equipe, onResolvido }: { solic: Solicitacao; equ
   const [motivo, setMotivo] = useState('');
   const [busy, setBusy] = useState(false);
   const refs = solic.anexos.filter((a) => a.categoria === 'referencia');
-  const elegiveis = equipe.filter((m) => (solic.tipo === 'video' ? m.role === 'videomaker' : m.role === 'designer_governo'));
+  const elegiveis = equipe.filter((m) => (solic.tipo === 'video' ? m.role === 'videomaker' || m.role === 'ceo' : m.role === 'designer_governo'));
 
   async function aprovar() {
     setBusy(true);

@@ -102,7 +102,7 @@ export function AgendaFilmagensPage() {
 
       {criando && (
         <NovaGravacaoModal
-          equipe={equipe.filter((e) => e.role === 'videomaker')}
+          equipe={equipe.filter((e) => e.role === 'videomaker' || e.role === 'ceo')}
           onClose={() => setCriando(false)}
           onCriado={() => { setCriando(false); carregar(); }}
         />
