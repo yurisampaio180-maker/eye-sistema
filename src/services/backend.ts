@@ -285,6 +285,7 @@ export const backend = {
     list: () => api.get<UsuarioAdmin[]>('/users'),
     create: (body: NovoUsuario) => api.post<{ id: string }>('/users', body),
     toggle: (id: string, ativo: boolean) => api.patch<{ ok: boolean }>(`/users/${id}`, { ativo }),
+    alterarRole: (id: string, role: string) => api.patch<{ ok: boolean }>(`/users/${id}/role`, { role }),
   },
   motor: {
     gerar: (clienteId: string, mes?: string) =>

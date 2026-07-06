@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react';
-import { UserCog, Plus, Loader2, Power, ShieldCheck, KeyRound } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { UserCog, Plus, Loader2, Power, ShieldCheck, KeyRound, ChevronDown } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, Avatar, EmptyState } from '@/components/ui';
 import { backend, type UsuarioAdmin, type Unidade } from '@/services/backend';
 import { roleLabel } from '@/stores/auth';
 import { cn } from '@/lib/utils';
+
+const ROLES_OPCOES: Array<{ value: string; label: string }> = [
+  { value: 'ceo', label: 'CEO' },
+  { value: 'social', label: 'Social Media' },
+  { value: 'videomaker', label: 'Videomaker' },
+  { value: 'designer_governo', label: 'Designer Governo' },
+  { value: 'gestor_cliente', label: 'Gestor do Cliente' },
+  { value: 'cliente', label: 'Secretaria' },
+];
 
 export function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([]);
@@ -65,7 +74,7 @@ export function UsuariosPage() {
                     </div>
                   </td>
                   <td className="px-4 py-2.5">
-                    <Badge className="bg-ink-700 text-cloud-muted">{roleLabel[u.role as keyof typeof roleLabel] ?? u.role}</Badge>
+                    <RolePicker usuario={u} onAlterado={carregar} />
                   </td>
                   <td className="px-4 py-2.5 text-cloud-muted">
                     {u.clienteNome ?? '—'}{u.unidadeNome ? ` · ${u.unidadeNome}` : ''}
@@ -92,6 +101,65 @@ export function UsuariosPage() {
             </tbody>
           </table>
         </Card>
+      )}
+    </div>
+  );
+}
+
+function RolePicker({ usuario, onAlterado }: { usuario: UsuarioAdmin; onAlterado: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  async function alterar(novoRole: string) {
+    if (novoRole === usuario.role) { setOpen(false); return; }
+    setBusy(true); setErro('');
+    try {
+      await backend.usuarios.alterarRole(usuario.id, novoRole);
+      setOpen(false);
+      onAlterado();
+    } catch (e: any) {
+      setErro(e?.message ?? 'Erro ao alterar papel.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={busy}
+        className="flex items-center gap-1 rounded-lg border border-ink-700/60 bg-ink-800 px-2 py-1 text-xs text-cloud-muted hover:border-ink-600 hover:text-cloud"
+      >
+        {roleLabel[usuario.role as keyof typeof roleLabel] ?? usuario.role}
+        <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-xl border border-ink-700 bg-ink-900 py-1 shadow-xl">
+          {erro && <p className="px-3 py-1 text-[10px] text-eye-red">{erro}</p>}
+          {ROLES_OPCOES.map((op) => (
+            <button
+              key={op.value}
+              onClick={() => alterar(op.value)}
+              className={cn(
+                'block w-full px-3 py-1.5 text-left text-xs hover:bg-ink-800',
+                op.value === usuario.role ? 'text-eye-red font-semibold' : 'text-cloud-muted',
+              )}
+            >
+              {op.label}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
