@@ -14,6 +14,7 @@ import { compact, brl, pct, cn } from '@/lib/utils';
 import { dayMonth, time, monthMatrix, fmt, isSameDay } from '@/lib/dates';
 import { ClienteCriarIA } from '@/features/conteudo/ConteudoPage';
 import { ClienteCalendario } from './ClienteCalendario';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { dnaByClient } from '@/features/conteudo/data/clientesDNA';
 import { frameworks } from '@/features/conteudo/data/frameworks';
 import { backend, solicStatusInfo, type Solicitacao } from '@/services/backend';
@@ -122,8 +123,8 @@ export function ClienteDetalhePage() {
       )}
 
       <div className="animate-fade-in">
-        {aba === 'visao' && <VisaoGeral id={id} client={client} igData={igData} role={role} />}
-        {aba === 'calendario' && <ClienteCalendario clienteId={id} primary={client.brand.primary} />}
+        {aba === 'visao' && <ErrorBoundary><VisaoGeral id={id} client={client} igData={igData} role={role} /></ErrorBoundary>}
+        {aba === 'calendario' && <ErrorBoundary><ClienteCalendario clienteId={id} primary={client.brand.primary} /></ErrorBoundary>}
         {aba === 'ia' && <ClienteCriarIA clienteId={id} />}
         {aba === 'videos' && <VideosCliente id={id} />}
         {aba === 'solicitacoes' && <SolicitacoesCliente id={id} />}

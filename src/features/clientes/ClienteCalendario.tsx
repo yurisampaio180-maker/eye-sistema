@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Loader2, Check, X, Clock, Send, CalendarPlus } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui';
-import { backend, postStatusInfo, type PostAgenda } from '@/services/backend';
+import { backend, safePostStatus, postStatusInfo, type PostAgenda } from '@/services/backend';
 import { useAuth } from '@/stores/auth';
 import { cn } from '@/lib/utils';
 import { monthMatrix, fmt, time, isSameDay, dayMonth } from '@/lib/dates';
@@ -14,7 +14,7 @@ function resolveImgUrl(url: string | null | undefined): string | null {
 }
 
 function statusKey(p: PostAgenda) {
-  return p.atrasado && p.status !== 'postado' ? 'atrasado' : p.status;
+  return safePostStatus(p.status, p.atrasado);
 }
 
 export function ClienteCalendario({ clienteId, primary }: { clienteId: string; primary: string }) {
@@ -62,7 +62,7 @@ export function ClienteCalendario({ clienteId, primary }: { clienteId: string; p
       ) : view === 'lista' ? (
         <div className="space-y-2">
           {[...posts].sort((a, b) => +new Date(a.dataHora) - +new Date(b.dataHora)).map((p) => {
-            const st = postStatusInfo[statusKey(p)];
+            const st = statusKey(p);
             return (
               <button key={p.id} onClick={() => setSel(p)} className="flex w-full items-center gap-3 rounded-xl border border-ink-700/50 p-3 text-left hover:border-eye-red/40">
                 <div className="grid w-14 shrink-0 place-items-center rounded-lg bg-ink-800 py-1.5"><span className="font-display text-sm font-bold text-cloud">{time(p.dataHora)}</span></div>
@@ -87,7 +87,7 @@ export function ClienteCalendario({ clienteId, primary }: { clienteId: string; p
                   <span className={cn('text-[10px] font-semibold sm:text-xs', today ? 'text-eye-red' : 'text-cloud-dim')}>{fmt(day, 'd')}</span>
                   <div className="mt-0.5 space-y-0.5">
                     {dp.slice(0, 3).map((p) => {
-                      const st = postStatusInfo[statusKey(p)];
+                      const st = statusKey(p);
                       return <button key={p.id} onClick={() => setSel(p)} title={`${time(p.dataHora)} · ${p.titulo}`} className="block w-full truncate rounded border-l-2 bg-ink-800 px-1 py-0.5 text-left text-[9px] text-cloud sm:text-[10px]" style={{ borderLeftColor: primary }}><span className={cn('mr-0.5 inline-block h-1.5 w-1.5 rounded-full align-middle', st.dot)} />{time(p.dataHora)}</button>;
                     })}
                   </div>
@@ -108,7 +108,7 @@ export function ClienteCalendario({ clienteId, primary }: { clienteId: string; p
 function PostModal({ post, role, onClose, onMudou }: { post: PostAgenda; role?: string; onClose: () => void; onMudou: () => void }) {
   const [busy, setBusy] = useState(false);
   const [legenda, setLegenda] = useState(post.legenda);
-  const st = postStatusInfo[statusKey(post)];
+  const st = statusKey(post);
   async function acao(fn: () => Promise<unknown>) { setBusy(true); try { await fn(); onMudou(); } finally { setBusy(false); } }
 
   return (

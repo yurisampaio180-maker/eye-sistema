@@ -126,7 +126,7 @@ export interface Membro {
   avatarColor: string;
 }
 
-export type PostStatus = 'rascunho' | 'aguardando_confirmacao' | 'confirmado' | 'postado';
+export type PostStatus = 'rascunho' | 'aguardando_confirmacao' | 'confirmado' | 'postado' | 'agendado';
 
 export interface TransicaoSLA {
   id: string;
@@ -179,9 +179,16 @@ export const postStatusInfo: Record<PostStatus | 'atrasado', { label: string; ba
   rascunho: { label: 'Rascunho', badge: 'bg-ink-700 text-cloud-muted', dot: 'bg-cloud-dim' },
   aguardando_confirmacao: { label: 'Aguardando CEO', badge: 'bg-amber-500/15 text-amber-400', dot: 'bg-amber-400' },
   confirmado: { label: 'Confirmado', badge: 'bg-emerald-500/15 text-emerald-400', dot: 'bg-emerald-400' },
-  postado: { label: 'Postado', badge: 'bg-sky-500/15 text-sky-400', dot: 'bg-sky-400' },
+  agendado: { label: 'Agendado', badge: 'bg-sky-500/15 text-sky-400', dot: 'bg-sky-400' },
+  postado: { label: 'Postado', badge: 'bg-emerald-500/15 text-emerald-400', dot: 'bg-emerald-400' },
   atrasado: { label: 'Atrasado', badge: 'bg-eye-red/15 text-eye-red', dot: 'bg-eye-red' },
 };
+
+export const POST_STATUS_FALLBACK = { label: 'Indefinido', badge: 'bg-ink-700 text-cloud-dim', dot: 'bg-cloud-dim' };
+export function safePostStatus(status?: string, atrasado?: boolean) {
+  const key = atrasado && status !== 'postado' ? 'atrasado' : (status ?? '');
+  return postStatusInfo[key as PostStatus | 'atrasado'] ?? POST_STATUS_FALLBACK;
+}
 
 export interface Unidade {
   id: string;
