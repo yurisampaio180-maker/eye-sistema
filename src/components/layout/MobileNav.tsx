@@ -15,6 +15,7 @@ const items: Item[] = [
   { to: '/clientes', label: 'Clientes', icon: Users, roles: ['ceo', 'social', 'videomaker'] },
   { to: '/clientes/governo-moraujo', label: 'Governo', icon: Sparkles, roles: ['designer_governo'] },
   { to: '/conteudo', label: 'IA', icon: Sparkles, roles: ['ceo', 'social', 'videomaker'] },
+  { to: '/conteudo', label: 'Criar IA', icon: Sparkles, roles: ['gestor_cliente', 'cliente'] },
   { to: '/videos', label: 'Produção', icon: Clapperboard, roles: ['ceo', 'social', 'videomaker'] },
   { to: '/notificacoes', label: 'Disparos', icon: Bell, roles: ['ceo', 'social'] },
 ];

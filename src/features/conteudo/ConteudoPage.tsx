@@ -54,9 +54,10 @@ export function ConteudoPage() {
   const { user } = useAuth();
   const { data: clients } = useClients();
   const isCeo = user?.role === 'ceo';
+  const isSecretaria = user?.role === 'gestor_cliente' || user?.role === 'cliente';
   const [modo, setModo] = useState<Modo>(isCeo ? 'mes' : 'criar');
   const [tab, setTab] = useState<Tab>('motor');
-  const [clienteId, setClienteId] = useState('verso-nosso');
+  const [clienteId, setClienteId] = useState(user?.clienteId ?? 'verso-nosso');
   const dna = dnaByClient(clienteId);
 
   return (
@@ -102,18 +103,20 @@ export function ConteudoPage() {
       {modo === 'criar' && (
         <>
           <div className="mb-5 flex flex-wrap items-center gap-3">
-            <select
-              className="eye-input w-auto"
-              value={clienteId}
-              onChange={(e) => setClienteId(e.target.value)}
-            >
-              {clients?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-              <option value="eye-agencia">EYE Agência (própria)</option>
-            </select>
+            {!isSecretaria && (
+              <select
+                className="eye-input w-auto"
+                value={clienteId}
+                onChange={(e) => setClienteId(e.target.value)}
+              >
+                {clients?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+                <option value="eye-agencia">EYE Agência (própria)</option>
+              </select>
+            )}
 
             <div className="ml-auto flex rounded-xl border border-ink-700 p-0.5">
               {(

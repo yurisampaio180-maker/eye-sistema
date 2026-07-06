@@ -35,6 +35,7 @@ const nav: NavItem[] = [
   { to: '/aprovacoes', label: 'Aprovações', icon: ShieldCheck, roles: ['ceo'], badge: 'aprovacoes' },
   { to: '/clientes', label: 'Clientes', icon: Users, roles: ['ceo', 'social', 'videomaker'] },
   { to: '/clientes/governo-moraujo', label: 'Governo (Criar IA)', icon: Sparkles, roles: ['designer_governo'] },
+  { to: '/conteudo', label: 'Criar Imagem', icon: Sparkles, roles: ['gestor_cliente', 'cliente'] },
   { to: '/calendario', label: 'Calendário', icon: CalendarDays, roles: ['ceo'] },
   { to: '/conteudo', label: 'Conteúdo', icon: Sparkles, roles: ['ceo', 'social', 'videomaker'] },
   { to: '/trafego', label: 'Tráfego Pago', icon: Megaphone, roles: ['ceo'] },
