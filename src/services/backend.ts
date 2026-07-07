@@ -130,8 +130,10 @@ export interface ClienteAsset {
   id: string;
   clienteId: string;
   tipo: 'logo' | 'referencia';
+  origem: 'manual' | 'auto_aprovada';
   url: string;
   nome: string | null;
+  usos: number;
   createdAt: string;
 }
 

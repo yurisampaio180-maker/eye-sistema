@@ -424,11 +424,12 @@ function ConfiguracoesCliente({ id, client }: { id: string; client: any }) {
   );
 }
 
-// ---------- Assets (logos + referências para a IA) ----------
+// ---------- Banco de Imagens (logo + referências curadas + auto-aprovadas) ----------
 function AssetsCliente({ clienteId }: { clienteId: string }) {
   const [assets, setAssets] = useState<ClienteAsset[]>([]);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  const [preview, setPreview] = useState<ClienteAsset | null>(null);
 
   async function carregar() {
     try { setAssets(await backend.assets.list(clienteId)); } catch { setAssets([]); }
@@ -456,66 +457,89 @@ function AssetsCliente({ clienteId }: { clienteId: string }) {
   }
 
   const logos = assets.filter((a) => a.tipo === 'logo');
-  const refs  = assets.filter((a) => a.tipo === 'referencia');
+  const refsManuais = assets.filter((a) => a.tipo === 'referencia' && a.origem !== 'auto_aprovada');
+  const refsAuto = assets.filter((a) => a.tipo === 'referencia' && a.origem === 'auto_aprovada');
+
+  const Thumb = ({ a, contain }: { a: ClienteAsset; contain?: boolean }) => (
+    <div className="group relative rounded-xl border border-ink-700 bg-ink-900 p-1">
+      <img
+        src={a.url}
+        alt={a.nome ?? a.tipo}
+        onClick={() => setPreview(a)}
+        className={cn('h-16 w-16 cursor-zoom-in rounded-lg', contain ? 'object-contain' : 'object-cover')}
+      />
+      <button onClick={() => remover(a.id)} disabled={busy} className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-eye-red text-white group-hover:flex">
+        <Trash2 className="h-3 w-3" />
+      </button>
+      {a.usos > 0 && (
+        <span className="absolute -bottom-1 -right-1 rounded-full bg-ink-700 px-1.5 text-[8px] font-semibold text-cloud-muted" title={`Usada em ${a.usos} gerações`}>
+          {a.usos}x
+        </span>
+      )}
+      <p className="mt-1 max-w-[64px] truncate text-center text-[9px] text-cloud-dim">{a.nome}</p>
+    </div>
+  );
 
   return (
     <Card className="p-5">
-      <div className="mb-4 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">Assets para geração de imagem</h2></div>
+      <div className="mb-4 flex items-center gap-2"><ImageIcon className="h-4 w-4 text-eye-red" /><h2 className="font-display font-bold text-cloud">Banco de Imagens</h2></div>
       {erro && <p className="mb-3 rounded-lg border border-eye-red/30 bg-eye-red/5 p-2 text-xs text-eye-red">{erro}</p>}
 
-      {/* Logos */}
+      {/* Logo */}
       <div className="mb-5">
         <div className="mb-2 flex items-center justify-between">
-          <p className="eye-label">Logomarcas oficiais <span className="text-cloud-dim">(PNG com fundo transparente)</span></p>
+          <p className="eye-label">Logomarca oficial <span className="text-cloud-dim">(PNG com fundo transparente)</span></p>
           <label className={cn('eye-btn eye-btn-ghost cursor-pointer py-1 text-xs', busy && 'pointer-events-none opacity-50')}>
-            <Upload className="h-3.5 w-3.5" /> Adicionar logo
+            <Upload className="h-3.5 w-3.5" /> Enviar PNG
             <input type="file" accept="image/png" className="hidden" onChange={(e) => e.target.files?.[0] && upload('logo', e.target.files[0])} />
           </label>
         </div>
         {logos.length === 0 ? (
-          <p className="text-xs text-cloud-dim">Nenhuma logo cadastrada. A IA usará descrição textual.</p>
+          <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-400">Nenhuma logo cadastrada — a geração de artes fica bloqueada até enviar o PNG.</p>
         ) : (
-          <div className="flex flex-wrap gap-3">
-            {logos.map((a) => (
-              <div key={a.id} className="group relative rounded-xl border border-ink-700 bg-ink-900 p-1">
-                <img src={a.url} alt={a.nome ?? 'logo'} className="h-16 w-16 rounded-lg object-contain" />
-                <button onClick={() => remover(a.id)} disabled={busy} className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-eye-red text-white group-hover:flex">
-                  <Trash2 className="h-3 w-3" />
-                </button>
-                <p className="mt-1 max-w-[64px] truncate text-center text-[9px] text-cloud-dim">{a.nome}</p>
-              </div>
-            ))}
-          </div>
+          <div className="flex flex-wrap gap-3">{logos.map((a) => <Thumb key={a.id} a={a} contain />)}</div>
         )}
-        <p className="mt-1 text-[10px] text-amber-400/80">⚠️ A logo será inserida EXATAMENTE como enviada — sem redesenho.</p>
+        <p className="mt-1 text-[10px] text-amber-400/80">A logo será inserida EXATAMENTE como enviada — sem redesenho.</p>
       </div>
 
-      {/* Referências */}
-      <div>
+      {/* Referências curadas */}
+      <div className="mb-5">
         <div className="mb-2 flex items-center justify-between">
-          <p className="eye-label">Artes de referência <span className="text-cloud-dim">(exemplos aprovados de estilo)</span></p>
+          <p className="eye-label">Referências curadas <span className="text-cloud-dim">(enviadas por você — prioridade máxima)</span></p>
           <label className={cn('eye-btn eye-btn-ghost cursor-pointer py-1 text-xs', busy && 'pointer-events-none opacity-50')}>
-            <Upload className="h-3.5 w-3.5" /> Adicionar referência
+            <Upload className="h-3.5 w-3.5" /> Enviar referência
             <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && upload('referencia', e.target.files[0])} />
           </label>
         </div>
-        {refs.length === 0 ? (
-          <p className="text-xs text-cloud-dim">Nenhuma referência. Envie artes aprovadas para que a IA imite o estilo.</p>
+        {refsManuais.length === 0 ? (
+          <p className="text-xs text-cloud-dim">Nenhuma referência curada. Envie as melhores artes já aprovadas deste cliente.</p>
         ) : (
-          <div className="flex flex-wrap gap-3">
-            {refs.map((a) => (
-              <div key={a.id} className="group relative rounded-xl border border-ink-700 bg-ink-900 p-1">
-                <img src={a.url} alt={a.nome ?? 'ref'} className="h-16 w-16 rounded-lg object-cover" />
-                <button onClick={() => remover(a.id)} disabled={busy} className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-eye-red text-white group-hover:flex">
-                  <Trash2 className="h-3 w-3" />
-                </button>
-                <p className="mt-1 max-w-[64px] truncate text-center text-[9px] text-cloud-dim">{a.nome}</p>
-              </div>
-            ))}
-          </div>
+          <div className="flex flex-wrap gap-3">{refsManuais.map((a) => <Thumb key={a.id} a={a} />)}</div>
         )}
-        <p className="mt-1 text-[10px] text-cloud-dim">💡 Até 3 referências são enviadas a cada geração de arte.</p>
       </div>
+
+      {/* Referências automáticas */}
+      <div>
+        <p className="eye-label mb-2">Referências automáticas <span className="text-cloud-dim">(artes aprovadas no calendário)</span></p>
+        {refsAuto.length === 0 ? (
+          <p className="text-xs text-cloud-dim">Ainda vazio. Cada arte que você aprova entra aqui automaticamente.</p>
+        ) : (
+          <div className="flex flex-wrap gap-3">{refsAuto.map((a) => <Thumb key={a.id} a={a} />)}</div>
+        )}
+        <p className="mt-1 text-[10px] text-cloud-dim">Cada arte aprovada entra aqui e ensina o gerador o padrão da marca (máx. 10, as mais recentes). Remova as que não representarem bem a marca.</p>
+      </div>
+
+      {/* Preview ampliado */}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => setPreview(null)}>
+          <div className="max-h-[85vh] max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <img src={preview.url} alt={preview.nome ?? ''} className="max-h-[80vh] w-auto rounded-2xl border border-ink-700" />
+            <p className="mt-2 text-center text-xs text-cloud-muted">
+              {preview.nome}{preview.usos > 0 ? ` · usada em ${preview.usos} gerações` : ''}
+            </p>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
