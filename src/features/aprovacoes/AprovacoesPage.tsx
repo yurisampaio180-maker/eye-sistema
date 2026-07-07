@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Building2,
   Clock,
+  Pencil,
 } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, Avatar, EmptyState } from '@/components/ui';
 import {
@@ -18,11 +19,19 @@ import {
   type Solicitacao,
   type Membro,
   type TransicaoSLA,
+  type PostAgenda,
 } from '@/services/backend';
+import { EditarEventoModal } from '@/features/agenda/EditarEventoModal';
 import { cn } from '@/lib/utils';
 import { fmt } from '@/lib/dates';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3333/api/v1').replace('/api/v1', '');
+
+function resolveImg(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  return `${API_ORIGIN}${url}`;
+}
 
 const prioridadePeso = { urgente: 0, alta: 1, normal: 2, baixa: 3 };
 
@@ -31,21 +40,23 @@ type Aba = 'aprovar' | 'confirmar';
 export function AprovacoesPage() {
   const [aba, setAba] = useState<Aba>('aprovar');
   const [aprovar, setAprovar] = useState<Solicitacao[]>([]);
-  const [confirmar, setConfirmar] = useState<Solicitacao[]>([]);
+  const [postsConfirmar, setPostsConfirmar] = useState<PostAgenda[]>([]);
+  const [solicsConfirmar, setSolicsConfirmar] = useState<Solicitacao[]>([]);
   const [equipe, setEquipe] = useState<Membro[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function carregar() {
     setLoading(true);
     try {
-      const [pend, prontas, membros] = await Promise.all([
+      const [pend, pendencias, membros] = await Promise.all([
         backend.solicitacoes.list('em_aprovacao'),
-        backend.solicitacoes.list('aguardando_confirmacao'),
+        backend.pendenciasConfirmar(),
         backend.equipe(),
       ]);
       pend.sort((a, b) => prioridadePeso[a.prioridade] - prioridadePeso[b.prioridade]);
       setAprovar(pend);
-      setConfirmar(prontas);
+      setPostsConfirmar(pendencias.posts);
+      setSolicsConfirmar(pendencias.solicitacoes);
       setEquipe(membros);
     } finally {
       setLoading(false);
@@ -58,7 +69,8 @@ export function AprovacoesPage() {
     return () => clearInterval(t);
   }, []);
 
-  const lista = aba === 'aprovar' ? aprovar : confirmar;
+  const totalConfirmar = postsConfirmar.length + solicsConfirmar.length;
+  const vazio = aba === 'aprovar' ? aprovar.length === 0 : totalConfirmar === 0;
 
   return (
     <div>
@@ -70,21 +82,84 @@ export function AprovacoesPage() {
 
       <div className="mb-5 flex gap-2">
         <TabBtn ativo={aba === 'aprovar'} onClick={() => setAba('aprovar')} label="Aprovar solicitações" n={aprovar.length} />
-        <TabBtn ativo={aba === 'confirmar'} onClick={() => setAba('confirmar')} label="Confirmar p/ postar" n={confirmar.length} />
+        <TabBtn ativo={aba === 'confirmar'} onClick={() => setAba('confirmar')} label="Confirmar p/ postar" n={totalConfirmar} />
       </div>
 
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-6 w-6 animate-spin text-eye-red" /></div>
-      ) : lista.length === 0 ? (
-        <EmptyState>{aba === 'aprovar' ? 'Nenhuma solicitação aguardando aprovação. 🎉' : 'Nenhuma peça aguardando confirmação.'}</EmptyState>
+      ) : vazio ? (
+        <EmptyState>{aba === 'aprovar' ? 'Nenhuma solicitação aguardando aprovação. 🎉' : 'Nenhum post aguardando confirmação. 🎉'}</EmptyState>
+      ) : aba === 'aprovar' ? (
+        <div className="space-y-4">
+          {aprovar.map((s) => <AprovacaoCard key={s.id} solic={s} equipe={equipe} onResolvido={carregar} />)}
+        </div>
       ) : (
         <div className="space-y-4">
-          {aba === 'aprovar'
-            ? lista.map((s) => <AprovacaoCard key={s.id} solic={s} equipe={equipe} onResolvido={carregar} />)
-            : lista.map((s) => <ConfirmacaoCard key={s.id} solic={s} onResolvido={carregar} />)}
+          {postsConfirmar.map((p) => <PostConfirmarCard key={p.id} post={p} onResolvido={carregar} />)}
+          {solicsConfirmar.map((s) => <ConfirmacaoCard key={s.id} solic={s} onResolvido={carregar} />)}
         </div>
       )}
     </div>
+  );
+}
+
+// Card de confirmação de POST do calendário (EventoAgenda aguardando_confirmacao)
+function PostConfirmarCard({ post, onResolvido }: { post: PostAgenda; onResolvido: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [modo, setModo] = useState<'idle' | 'rejeitar'>('idle');
+  const [motivo, setMotivo] = useState('');
+  const [editando, setEditando] = useState(false);
+
+  async function acao(fn: () => Promise<unknown>) {
+    setBusy(true);
+    try { await fn(); onResolvido(); } finally { setBusy(false); }
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-start gap-3 p-4">
+        <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-xl', post.tipo === 'evento' ? 'bg-sky-500/15 text-sky-400' : 'bg-violet-500/15 text-violet-400')}>
+          {post.tipo === 'evento' ? <Video className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-bold text-cloud">{post.titulo}</h3>
+          <p className="text-xs text-cloud-dim">
+            <Building2 className="mr-1 inline h-3 w-3" />{post.clienteNome ?? '—'}
+            {' · '}{fmt(post.dataHora, "dd/MM 'às' HH:mm")}{post.plataforma ? ` · ${post.plataforma}` : ''}
+            {post.geradoPorIA === 1 ? ' · ✨ IA' : ''}
+          </p>
+        </div>
+        <Badge className="bg-orange-500/15 text-orange-400" dot="bg-orange-400">aguardando confirmação</Badge>
+      </div>
+      {post.imagemUrl && (
+        <div className="border-t border-ink-700/60 px-4 py-3">
+          <img src={resolveImg(post.imagemUrl)} alt="" className="max-h-56 rounded-lg object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        </div>
+      )}
+      {post.legenda && <p className="border-t border-ink-700/60 px-4 py-3 text-sm text-cloud-muted line-clamp-4 whitespace-pre-line">{post.legenda}</p>}
+      <div className="border-t border-ink-700/60 bg-ink-900/40 p-4">
+        {modo === 'rejeitar' ? (
+          <div className="space-y-2">
+            <textarea className="eye-input h-20 resize-none" placeholder="Motivo da devolução (volta para rascunho)" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+            <div className="flex gap-2">
+              <Button variant="primary" className="bg-eye-red" disabled={busy || motivo.trim().length < 3} onClick={() => acao(() => backend.agenda.devolver(post.id, motivo))}>Devolver p/ ajuste</Button>
+              <Button variant="ghost" onClick={() => setModo('idle')}>Cancelar</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => acao(() => backend.agenda.confirmar(post.id))} disabled={busy}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Confirmar
+            </Button>
+            <Button variant="ghost" onClick={() => setEditando(true)}><Pencil className="h-4 w-4" /> Editar</Button>
+            <Button variant="ghost" onClick={() => setModo('rejeitar')}><X className="h-4 w-4" /> Rejeitar</Button>
+          </div>
+        )}
+      </div>
+      {editando && (
+        <EditarEventoModal ev={post} onClose={() => setEditando(false)} onSalvo={() => { setEditando(false); onResolvido(); }} />
+      )}
+    </Card>
   );
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, ShieldCheck, CalendarClock, Users, ArrowRight, Inbox, Factory } from 'lucide-react';
 import { PageHeader, Card, Badge, EmptyState } from '@/components/ui';
-import { backend, solicStatusInfo, type Stats, type PostAgenda, type SolicStatus } from '@/services/backend';
+import { backend, solicStatusInfo, type Stats, type SolicStatus } from '@/services/backend';
 import { cn } from '@/lib/utils';
 
 const prodLabel: Record<string, string> = {
@@ -12,13 +12,13 @@ const prodLabel: Record<string, string> = {
 
 export function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [pendentes, setPendentes] = useState<PostAgenda[]>([]);
+  const [confirmar, setConfirmar] = useState(0);
   const [clientesN, setClientesN] = useState<number | null>(null);
 
   async function carregar() {
     try {
-      const [s, p, c] = await Promise.all([backend.stats(), backend.agenda.pendentes(), backend.clientes()]);
-      setStats(s); setPendentes(p); setClientesN(c.length);
+      const [s, pend, c] = await Promise.all([backend.stats(), backend.pendenciasConfirmar(), backend.clientes()]);
+      setStats(s); setConfirmar(pend.total); setClientesN(c.length);
     } catch { /* silencioso */ }
   }
   useEffect(() => {
@@ -36,7 +36,7 @@ export function DashboardPage() {
       {/* KPIs reais (sem números inventados) */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Solicitações p/ aprovar" value={stats ? String(stats.pendentesAprovacao) : '—'} accent icon={ShieldCheck} to="/aprovacoes" />
-        <Kpi label="Posts p/ confirmar" value={String(pendentes.length)} icon={CalendarClock} to="/aprovacoes" />
+        <Kpi label="Posts p/ confirmar" value={String(confirmar)} icon={CalendarClock} to="/aprovacoes" />
         <Kpi label="Clientes ativos" value={clientesN === null ? '—' : String(clientesN)} icon={Users} to="/clientes" />
         <Kpi label="Solicitações no total" value={stats ? String(totalSolic) : '—'} icon={Inbox} />
       </div>
@@ -50,9 +50,9 @@ export function DashboardPage() {
           </div>
           <div className="space-y-2">
             <LinhaPendencia label="Solicitações para aprovar" n={stats?.pendentesAprovacao ?? 0} />
-            <LinhaPendencia label="Posts para confirmar" n={pendentes.length} />
+            <LinhaPendencia label="Posts para confirmar" n={confirmar} />
           </div>
-          {(stats?.pendentesAprovacao ?? 0) === 0 && pendentes.length === 0 && (
+          {(stats?.pendentesAprovacao ?? 0) === 0 && confirmar === 0 && (
             <p className="mt-3 flex items-center gap-2 text-sm text-emerald-400"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Tudo em dia. Nada aguardando.</p>
           )}
         </Card>

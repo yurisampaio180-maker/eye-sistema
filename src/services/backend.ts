@@ -270,6 +270,17 @@ export const backend = {
     sincronizar: (clienteId: string) =>
       api.post<InstagramStatus>(`/instagram/sincronizar/${clienteId}`),
   },
+  // Fonte ÚNICA de verdade para "aguardando confirmação do CEO":
+  // dashboard (contador) e aba "Confirmar p/ postar" consomem ESTA função.
+  // Junta posts do calendário (EventoAgenda) + peças entregues (Solicitacao),
+  // ambos em status 'aguardando_confirmacao'. Impossível divergir.
+  pendenciasConfirmar: async () => {
+    const [posts, solicitacoes] = await Promise.all([
+      api.get<PostAgenda[]>('/agenda/pendentes'),
+      api.get<Solicitacao[]>('/solicitacoes?status=aguardando_confirmacao'),
+    ]);
+    return { posts, solicitacoes, total: posts.length + solicitacoes.length };
+  },
   equipe: () => api.get<Membro[]>('/equipe'),
   assets: {
     list: (clienteId: string) => api.get<ClienteAsset[]>(`/clientes/${clienteId}/assets`),
