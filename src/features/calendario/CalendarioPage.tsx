@@ -4,6 +4,7 @@ import { addMonths, addWeeks, isSameMonth } from 'date-fns';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAgendaEvents } from '@/hooks/queries';
 import { backend, type PostAgenda, postStatusInfo } from '@/services/backend';
+import { EditarEventoModal } from '@/features/agenda/EditarEventoModal';
 import { Card, PageHeader } from '@/components/ui';
 import { monthMatrix, weekDays, fmt, time, isSameDay } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ export function CalendarioPage() {
   const [view, setView] = useState<ViewMode>('mes');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [dragId, setDragId] = useState<string | null>(null);
+  const [editando, setEditando] = useState<PostAgenda | null>(null);
 
   const { data: eventos } = useAgendaEvents();
   const { data: backendClients } = useQuery({
@@ -186,6 +188,7 @@ export function CalendarioPage() {
                       evento={p}
                       color={clientColor(p.clienteId)}
                       onDragStart={() => setDragId(p.id)}
+                      onClick={() => setEditando(p)}
                     />
                   ))}
                 </div>
@@ -212,6 +215,17 @@ export function CalendarioPage() {
           🎬 Filmagem
         </span>
       </div>
+
+      {editando && (
+        <EditarEventoModal
+          ev={editando}
+          onClose={() => setEditando(null)}
+          onSalvo={() => {
+            setEditando(null);
+            qc.invalidateQueries({ queryKey: ['agenda-events'] });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -220,10 +234,12 @@ function EventoChip({
   evento,
   color,
   onDragStart,
+  onClick,
 }: {
   evento: PostAgenda;
   color: string;
   onDragStart: () => void;
+  onClick: () => void;
 }) {
   const isFilmagem = evento.tipo === 'evento';
   const isIA = evento.geradoPorIA === 1;
@@ -233,9 +249,10 @@ function EventoChip({
     <div
       draggable
       onDragStart={onDragStart}
-      title={`${evento.titulo}${isFilmagem && evento.localEvento ? ` · ${evento.localEvento}` : ''}`}
+      onClick={onClick}
+      title={`${evento.titulo}${isFilmagem && evento.localEvento ? ` · ${evento.localEvento}` : ''} — clique para editar`}
       className={cn(
-        'cursor-grab rounded-lg border-l-2 px-1.5 py-1 text-[11px] leading-tight active:cursor-grabbing',
+        'cursor-pointer rounded-lg border-l-2 px-1.5 py-1 text-[11px] leading-tight hover:brightness-125 active:cursor-grabbing',
         isFilmagem ? 'bg-eye-red/10' : 'bg-ink-800'
       )}
       style={{ borderLeftColor: isFilmagem ? '#E11D2A' : color }}
