@@ -420,6 +420,95 @@ function ConfiguracoesCliente({ id, client }: { id: string; client: any }) {
         </Card>
       </div>
       <AssetsCliente clienteId={id} />
+      <ZonaPerigo clienteId={id} />
+    </div>
+  );
+}
+
+// ---------- Zona de perigo: reset completo do cliente (só CEO) ----------
+function ZonaPerigo({ clienteId }: { clienteId: string }) {
+  const role = useAuth((s) => s.user?.role);
+  const qc = useQueryClient();
+  const [nomeReal, setNomeReal] = useState('');
+  const [modal, setModal] = useState(false);
+  const [confirmacao, setConfirmacao] = useState('');
+  const [apagarAssets, setApagarAssets] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState('');
+  const [resumo, setResumo] = useState('');
+
+  useEffect(() => {
+    backend.clientes().then((cs) => setNomeReal(cs.find((c) => c.id === clienteId)?.nome ?? '')).catch(() => {});
+  }, [clienteId]);
+
+  if (role !== 'ceo' || !nomeReal) return null;
+
+  async function executarReset() {
+    setBusy(true); setErro('');
+    try {
+      const res = await backend.resetCliente(clienteId, confirmacao, apagarAssets);
+      const partes = Object.entries(res.removidos).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${k}`);
+      setResumo(partes.length ? `Removidos: ${partes.join(', ')}.` : 'Nada a remover — cliente já estava limpo.');
+      setModal(false);
+      setConfirmacao('');
+      setApagarAssets(false);
+      qc.invalidateQueries();
+    } catch (e: any) {
+      setErro(e?.message ?? 'Erro ao resetar.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-eye-red/30 bg-eye-red/5 p-4">
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-eye-red"><AlertCircle className="h-4 w-4" /> Zona de perigo</h3>
+      <p className="mt-1 text-xs text-cloud-dim">
+        Apaga todas as postagens, solicitações, tarefas, eventos, campanhas, métricas e gerações deste cliente.
+        A identidade (DNA, logo, referências) é mantida, a menos que você marque a opção no modal. Esta ação não pode ser desfeita.
+      </p>
+      {resumo && <p className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-2 text-xs text-emerald-400">{resumo}</p>}
+      <button
+        onClick={() => { setModal(true); setResumo(''); }}
+        className="mt-3 rounded-lg bg-eye-red/20 px-4 py-2 text-sm font-medium text-eye-red transition-colors hover:bg-eye-red/30"
+      >
+        <Trash2 className="mr-1 inline h-3.5 w-3.5" /> Resetar este cliente
+      </button>
+
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setModal(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-eye-red/40 bg-ink-850 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-lg font-bold text-cloud">Resetar {nomeReal}</h3>
+            <p className="mt-2 text-sm text-cloud-muted">
+              Digite <strong className="text-cloud">{nomeReal}</strong> para confirmar:
+            </p>
+            <input
+              type="text"
+              className="eye-input mt-2 border-eye-red/40"
+              value={confirmacao}
+              onChange={(e) => setConfirmacao(e.target.value)}
+              placeholder={nomeReal}
+            />
+            <label className="mt-3 flex items-center gap-2 text-xs text-cloud-muted">
+              <input type="checkbox" checked={apagarAssets} onChange={(e) => setApagarAssets(e.target.checked)} />
+              Apagar também logo e referências (recomeço absoluto)
+            </label>
+            {erro && <p className="mt-2 rounded-lg border border-eye-red/30 bg-eye-red/5 p-2 text-xs text-eye-red">{erro}</p>}
+            <div className="mt-4 flex gap-2">
+              <button
+                disabled={confirmacao !== nomeReal || busy}
+                onClick={executarReset}
+                className="flex-1 rounded-lg bg-eye-red py-2 text-sm font-medium text-white transition-colors hover:bg-eye-red/80 disabled:opacity-40"
+              >
+                {busy ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : 'Confirmar reset'}
+              </button>
+              <button onClick={() => setModal(false)} className="px-4 text-sm text-cloud-dim hover:text-cloud">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

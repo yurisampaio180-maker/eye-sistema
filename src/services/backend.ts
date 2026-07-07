@@ -277,6 +277,8 @@ export const backend = {
     remover: (clienteId: string, assetId: string) => api.delete(`/clientes/${clienteId}/assets/${assetId}`),
   },
   clientes: () => api.get<{ id: string; nome: string; corPrimaria: string; temLogo?: number | boolean }[]>('/clientes'),
+  resetCliente: (id: string, confirmacao: string, apagarAssets: boolean) =>
+    api.post<{ mensagem: string; removidos: Record<string, number> }>(`/clientes/${id}/reset`, { confirmacao, apagarAssets }),
   unidades: (clienteId: string) => api.get<Unidade[]>(`/clientes/${clienteId}/unidades`),
   stats: () => api.get<Stats>('/stats'),
   notificacoes: {
