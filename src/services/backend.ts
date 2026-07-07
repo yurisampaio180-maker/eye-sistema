@@ -276,7 +276,7 @@ export const backend = {
     upload: (clienteId: string, form: FormData) => api.upload<ClienteAsset>(`/clientes/${clienteId}/assets`, form),
     remover: (clienteId: string, assetId: string) => api.delete(`/clientes/${clienteId}/assets/${assetId}`),
   },
-  clientes: () => api.get<{ id: string; nome: string; corPrimaria: string }[]>('/clientes'),
+  clientes: () => api.get<{ id: string; nome: string; corPrimaria: string; temLogo?: number | boolean }[]>('/clientes'),
   unidades: (clienteId: string) => api.get<Unidade[]>(`/clientes/${clienteId}/unidades`),
   stats: () => api.get<Stats>('/stats'),
   notificacoes: {

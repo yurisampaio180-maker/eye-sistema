@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Users, ArrowUpRight, Megaphone, ListChecks } from 'lucide-react';
 import { useClients, useInstagramTodos } from '@/hooks/queries';
+import { backend } from '@/services/backend';
 import { Card, PageHeader, Badge, Skeleton } from '@/components/ui';
 import { clientStatusConfig, platformLabel } from '@/lib/status';
 import { compact, pct } from '@/lib/utils';
@@ -20,6 +22,15 @@ export function ClientesPage() {
   const igMap = useMemo(
     () => Object.fromEntries((igTodos ?? []).map((m) => [m.clienteId, m])),
     [igTodos]
+  );
+  const { data: backendClients } = useQuery({
+    queryKey: ['backend-clients-logo'],
+    queryFn: () => backend.clientes(),
+    staleTime: 60_000,
+  });
+  const logoMap = useMemo(
+    () => Object.fromEntries((backendClients ?? []).map((c) => [c.id, Boolean(c.temLogo)])),
+    [backendClients]
   );
 
   return (
@@ -65,7 +76,14 @@ export function ClientesPage() {
                       <h3 className="font-display text-lg font-bold text-cloud">{c.name}</h3>
                       <Badge className={st.badge} dot={st.dot}>{st.label}</Badge>
                     </div>
-                    <p className="text-xs text-cloud-muted">{c.segment}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-cloud-muted">{c.segment}</p>
+                      {backendClients && logoMap[c.id] === false && (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400" title="Logomarca não cadastrada — geração de artes bloqueada">
+                          Sem logo
+                        </span>
+                      )}
+                    </div>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {c.services.map((s) => (

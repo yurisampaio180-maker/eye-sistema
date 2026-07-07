@@ -607,10 +607,15 @@ function SlideCard({
   const [erro, setErro] = useState<{ texto: string; acao: string } | null>(null);
   const [refineMode, setRefineMode] = useState(false);
   const [refineText, setRefineText] = useState('');
+  const [logoModal, setLogoModal] = useState(false);
+  const [ultimoPromptExtra, setUltimoPromptExtra] = useState<string | undefined>(undefined);
+  const role = useAuth((s) => s.user?.role);
+  const podeEnviarLogo = role === 'ceo' || role === 'social';
 
   async function gerar(promptExtra?: string) {
     setLoading(true);
     setErro(null);
+    setUltimoPromptExtra(promptExtra);
     try {
       const promptFinal = promptExtra
         ? `${slide.raw}\n\nRefinamento solicitado: ${promptExtra}`
@@ -627,6 +632,11 @@ function SlideCard({
       setRefineMode(false);
       setRefineText('');
     } catch (e: any) {
+      if (e?.code === 'LOGO_AUSENTE') {
+        setLogoModal(true);
+        setLoading(false);
+        return;
+      }
       // Mensagens de erro amigáveis por código
       const ERROS: Record<string, { texto: string; acao: string }> = {
         OPENAI_BILLING_LIMIT: {
@@ -661,6 +671,31 @@ function SlideCard({
         }
       );
     } finally {
+      setLoading(false);
+    }
+  }
+
+  // Sobe a logo E retenta a geração que havia sido bloqueada
+  async function enviarLogoEContinuar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'image/png') {
+      setErro({ texto: 'A logo deve ser um arquivo PNG.', acao: 'Exporte com fundo transparente e envie novamente.' });
+      setLogoModal(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('tipo', 'logo');
+      fd.append('arquivo', file);
+      fd.append('nome', file.name);
+      await backend.assets.upload(clienteId, fd);
+      setLogoModal(false);
+      await gerar(ultimoPromptExtra);
+    } catch (err: any) {
+      setLogoModal(false);
+      setErro({ texto: 'Erro ao enviar a logo.', acao: err?.message ?? 'Tente pelo Banco de Imagens do cliente.' });
       setLoading(false);
     }
   }
@@ -755,6 +790,34 @@ function SlideCard({
               : <ImageIcon className="h-4 w-4" />}
             {imagemUrl ? 'Nova versão' : 'Gerar imagem'}
           </Button>
+
+          {/* Modal guiado: cliente sem logo */}
+          {logoModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setLogoModal(false)}>
+              <div className="w-full max-w-md rounded-2xl border border-amber-500/40 bg-ink-850 p-6" onClick={(e) => e.stopPropagation()}>
+                <h3 className="font-display text-lg font-bold text-cloud">Falta a logomarca deste cliente</h3>
+                <p className="mt-2 text-sm text-cloud-muted">
+                  Para gerar artes profissionais com a marca correta, envie o PNG da logo
+                  (fundo transparente). Isso é feito uma única vez.
+                </p>
+                {podeEnviarLogo ? (
+                  <label className={cn('mt-4 block cursor-pointer rounded-xl border-2 border-dashed border-ink-600 p-6 text-center transition-colors hover:border-eye-red', loading && 'pointer-events-none opacity-50')}>
+                    <span className="text-sm text-cloud-muted">
+                      {loading ? 'Enviando e gerando...' : 'Clique para enviar o PNG da logo'}
+                    </span>
+                    <input type="file" className="hidden" accept="image/png" onChange={enviarLogoEContinuar} />
+                  </label>
+                ) : (
+                  <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-400">
+                    Peça ao administrador da EYE Agência para cadastrar a logomarca do seu órgão.
+                  </p>
+                )}
+                <button onClick={() => setLogoModal(false)} className="mt-3 text-sm text-cloud-dim hover:text-cloud">
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Ações pós-geração */}
           {imagemUrl && !loading && (
