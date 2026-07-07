@@ -261,6 +261,9 @@ function EventoChip({
       <span className="line-clamp-1 text-cloud">
         {isFilmagem ? `🎬 ${evento.titulo}` : isIA ? `✨ ${evento.titulo}` : evento.titulo}
       </span>
+      {evento.clienteNome && (
+        <span className="line-clamp-1 text-[10px] text-cloud-muted">{evento.clienteNome}</span>
+      )}
       {isFilmagem && evento.localEvento && (
         <span className="mt-0.5 block truncate text-[10px] text-eye-red/70">
           {evento.localEvento}

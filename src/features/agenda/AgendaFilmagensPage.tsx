@@ -260,18 +260,23 @@ function NovaGravacaoModal({
   onCriado: () => void;
 }) {
   const [clientes, setClientes] = useState<{ id: string; nome: string }[]>([]);
-  const [clienteId, setClienteId] = useState('governo-moraujo');
+  const [clienteId, setClienteId] = useState('');
   const [titulo, setTitulo] = useState('');
   const [data, setData] = useState('');
   const [hora, setHora] = useState('');
   const [local, setLocal] = useState('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
+  const [tentouEnviar, setTentouEnviar] = useState(false);
 
   useEffect(() => { backend.clientes().then(setClientes).catch(() => {}); }, []);
 
+  const formValido = !!clienteId && !!titulo.trim() && !!data && !!hora;
+
   async function criar() {
     setErro('');
+    setTentouEnviar(true);
+    if (!clienteId) return setErro('Selecione o cliente desta demanda.');
     if (!titulo.trim() || !data || !hora) return setErro('Preencha título, data e hora.');
     setBusy(true);
     try {
@@ -316,10 +321,19 @@ function NovaGravacaoModal({
             <p className="rounded-lg border border-eye-red/30 bg-eye-red/5 p-2 text-xs text-eye-red">{erro}</p>
           )}
           <div>
-            <label className="eye-label mb-1 block">Cliente</label>
-            <select className="eye-input" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
+            <label className="eye-label mb-1 block">Cliente <span className="text-eye-red">*</span></label>
+            <select
+              required
+              className={cn('eye-input', tentouEnviar && !clienteId && 'border-eye-red ring-1 ring-eye-red')}
+              value={clienteId}
+              onChange={(e) => setClienteId(e.target.value)}
+            >
+              <option value="">Selecione o cliente...</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
+            {tentouEnviar && !clienteId && (
+              <p className="mt-1 text-xs text-eye-red">Selecione o cliente desta demanda.</p>
+            )}
           </div>
           <div>
             <label className="eye-label mb-1 block">Título</label>
@@ -352,7 +366,7 @@ function NovaGravacaoModal({
           <p className="text-xs text-cloud-dim">
             Entra direto na agenda do CEO + lembrete disponível após criar.
           </p>
-          <Button className="w-full" onClick={criar} disabled={busy}>
+          <Button className={cn('w-full', !formValido && 'opacity-40')} onClick={criar} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Enviar para o CEO
           </Button>

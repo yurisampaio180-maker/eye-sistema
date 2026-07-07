@@ -198,6 +198,7 @@ function EventoChip({ ev, onEditar }: { ev: PostAgenda; onEditar?: () => void })
       )}
     >
       <p className="truncate font-semibold text-cloud">{ev.titulo}</p>
+      {ev.clienteNome && <p className="truncate text-cloud-muted">{ev.clienteNome}</p>}
       {isVideo ? (
         <>
           <p className="text-cloud-dim">{time(ev.dataHora)}</p>
