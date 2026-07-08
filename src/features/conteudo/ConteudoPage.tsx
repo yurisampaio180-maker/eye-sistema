@@ -26,6 +26,7 @@ import { NovoPostModal } from '@/features/clientes/ClienteCalendario';
 import { cn } from '@/lib/utils';
 import { generateVideoScript } from '@/services/integrations/openai';
 import { backend } from '@/services/backend';
+import { ArtLightbox } from '@/components/ArtLightbox';
 import { dnaByClient } from './data/clientesDNA';
 import { frameworks, frameworkList } from './data/frameworks';
 import { generate, toClipboardText, formatLabel } from './engine';
@@ -607,6 +608,7 @@ function SlideCard({
   const [erro, setErro] = useState<{ texto: string; acao: string } | null>(null);
   const [refineMode, setRefineMode] = useState(false);
   const [refineText, setRefineText] = useState('');
+  const [lightbox, setLightbox] = useState(false);
   const [logoModal, setLogoModal] = useState(false);
   const [ultimoPromptExtra, setUltimoPromptExtra] = useState<string | undefined>(undefined);
   const role = useAuth((s) => s.user?.role);
@@ -753,10 +755,18 @@ function SlideCard({
 
         {/* Coluna de imagem */}
         <div className="flex flex-col gap-2">
-          {/* Preview */}
-          <div className="relative min-h-[180px] flex-1 overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+          {/* Preview — SEM corte (object-contain); clique abre em tela cheia */}
+          <div
+            className="relative flex min-h-[180px] flex-1 items-center justify-center overflow-hidden rounded-xl border border-ink-700 bg-ink-950"
+            style={{ maxHeight: '70vh' }}
+          >
             {imagemUrl ? (
-              <img src={resolveUrl(imagemUrl)!} alt="Arte gerada" className="h-full w-full object-cover" />
+              <img
+                src={resolveUrl(imagemUrl)!}
+                alt="Arte gerada"
+                className="max-h-[70vh] max-w-full cursor-zoom-in object-contain"
+                onClick={() => setLightbox(true)}
+              />
             ) : (
               <div className="grid h-full min-h-[180px] place-items-center">
                 <ImageIcon className="h-8 w-8 text-cloud-dim" />
@@ -772,6 +782,10 @@ function SlideCard({
               </div>
             )}
           </div>
+          {imagemUrl && !loading && (
+            <p className="text-center text-[11px] text-cloud-dim">Clique na imagem para ver em tela cheia</p>
+          )}
+          {lightbox && imagemUrl && <ArtLightbox src={resolveUrl(imagemUrl)!} onClose={() => setLightbox(false)} />}
 
           {/* Erro */}
           {erro && (

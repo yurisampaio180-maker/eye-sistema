@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Loader2, Check, X, Clock, Send, CalendarPlus, Pencil, MapPin } from 'lucide-react';
 import { Card, Button, Badge } from '@/components/ui';
+import { ArtLightbox } from '@/components/ArtLightbox';
 import { backend, safePostStatus, postStatusInfo, type PostAgenda, type Membro } from '@/services/backend';
 import { useAuth } from '@/stores/auth';
 import { cn } from '@/lib/utils';
@@ -119,6 +120,7 @@ function PostModal({ post, role, onClose, onMudou }: { post: PostAgenda; role?: 
   const [localEvento, setLocalEvento] = useState(post.localEvento ?? '');
   const [responsavelId, setResponsavelId] = useState(post.responsavelId ?? '');
   const [equipe, setEquipe] = useState<Membro[]>([]);
+  const [lightbox, setLightbox] = useState(false);
   const st = statusKey(post);
 
   useEffect(() => {
@@ -150,7 +152,16 @@ function PostModal({ post, role, onClose, onMudou }: { post: PostAgenda; role?: 
         </div>
       </div>
       <div className="space-y-3 p-4">
-        {post.imagemUrl && <img src={resolveImgUrl(post.imagemUrl)!} alt="" className="max-h-60 w-full rounded-xl object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+        {post.imagemUrl && (
+          <img
+            src={resolveImgUrl(post.imagemUrl)!}
+            alt=""
+            className="max-h-[60vh] w-full cursor-zoom-in rounded-xl bg-ink-950 object-contain"
+            onClick={() => setLightbox(true)}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        )}
+        {lightbox && post.imagemUrl && <ArtLightbox src={resolveImgUrl(post.imagemUrl)!} onClose={() => setLightbox(false)} />}
 
         {editando ? (
           <div className="space-y-3 rounded-xl border border-eye-red/20 bg-eye-red/5 p-3">
