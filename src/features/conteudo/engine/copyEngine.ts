@@ -19,7 +19,10 @@ export function buildCopy(
   framework: CopyFrameworkId,
   briefing: string
 ): CopyResult {
+  const temBriefing = briefing.trim().length > 0;
   const tema = briefing.trim() || 'novidade da marca';
+  // O BRIEFING é o assunto obrigatório do post. A fraseCentral da marca só
+  // entra como headline quando NÃO há briefing (fallback institucional/emocional).
   let headline = '';
   let apoio: string[] = [];
   let cta = '';
@@ -31,7 +34,7 @@ export function buildCopy(
       cta = dna.id === 'junior-univel' ? 'FALE COM A JUNIOR UNÍVEL' : 'GARANTA O SEU';
       break;
     case 'captacao_afiliados':
-      headline = toHeadline('Você também pode');
+      headline = toHeadline(temBriefing ? tema : 'Você também pode');
       apoio = [
         `Sobre ${tema}, sem complicação.`,
         'Começa pequeno, do seu jeito.',
@@ -44,12 +47,12 @@ export function buildCopy(
       cta = 'SALVA E APLICA';
       break;
     case 'institucional_autoridade':
-      headline = toHeadline(dna.fraseCentral || tema);
+      headline = toHeadline(temBriefing ? tema : (dna.fraseCentral || tema));
       apoio = ['Feito com e para as pessoas.', 'A prova está nas ruas.'];
       cta = 'ACOMPANHE DE PERTO';
       break;
     case 'emocional':
-      headline = toHeadline(dna.fraseCentral || tema, 4); // menos é mais
+      headline = toHeadline(temBriefing ? tema : (dna.fraseCentral || tema), 4); // menos é mais
       apoio = ['Algumas coisas a gente só sente.'];
       cta = 'PRESENTEIE';
       break;
