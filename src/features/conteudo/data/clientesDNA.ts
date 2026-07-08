@@ -44,6 +44,7 @@ export const clientesDNA: Record<string, ClienteDNA> = {
       'Fotografia real (não CGI/stock)',
       'Copy mínimo',
     ],
+    linguagemGrafica: `Editorial magazine composition (not centered poster layout). Serif display typography with elegant italic accents for emotional words. Brand graphic elements to include when fitting: audio waveform strips, hand-drawn heart doodles in brand orange, washi-tape/scrapbook accents, subtle paper texture overlay, torn-paper edges on photo frames. Photography: warm earthy color grade (terracotta, amber, cream), real candid people (POV shots, hands holding objects), film grain 4%. Layout: asymmetric, generous margins, text integrated INTO the composition (overlapping photo edges) — never text simply stacked on top.`,
     referenciasVisuais: ['A24 films', 'Spotify Wrapped', 'Apple Mother\'s Day'],
     frameworksCopyPreferidos: ['emocional', 'captacao_afiliados'],
     proibicoes: [

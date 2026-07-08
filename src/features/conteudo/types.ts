@@ -40,6 +40,11 @@ export interface ClienteDNA {
   fraseCentral?: string;
   publicos: PublicoDNA[];
   regrasDeArte: string[];
+  /** Linguagem gráfica da marca (elementos recorrentes das artes aprovadas):
+   *  composição, tipografia, elementos gráficos, colorimetria, texturas.
+   *  Entra como seção ⑨ do prompt técnico — é o que separa "bonito genérico"
+   *  de "parece da marca". Editável na aba Configurações. */
+  linguagemGrafica?: string;
   referenciasVisuais: string[]; // marcas/campanhas reais
   formatoCarrossel?: string;
   pilares?: string[];

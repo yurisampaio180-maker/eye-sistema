@@ -179,6 +179,15 @@ function buildSlide(
         .map((d) => `— ${d}`)
         .join('\n   '),
     },
+    ...(dna.linguagemGrafica
+      ? [{
+          id: 'linguagem',
+          titulo: '⑨ BRAND GRAPHIC LANGUAGE (from approved references)',
+          conteudo:
+            `${dna.linguagemGrafica}\n` +
+            `The attached reference images demonstrate this language — replicate their compositional sophistication, not just their colors.`,
+        }]
+      : []),
   ];
 
   const header =
